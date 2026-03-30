@@ -2,6 +2,7 @@ import {useState, useEffect} from 'react'
 import { useNavigate, Link } from 'react-router'
 import "../styles/Auth.style.scss"
 import { useAuth } from '../context/useAuth.js'
+import Loading from '../components/Loading.jsx'
 
 const Login = () => {
     const { user, loading, handleLogin } = useAuth()
@@ -24,7 +25,9 @@ const Login = () => {
     }
 
     if(loading){
-        return (<main><h1>Loading.......</h1></main>)
+        return (
+            <Loading text="Logging in..." />
+        )
     }
 
 

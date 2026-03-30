@@ -6,7 +6,7 @@ const api = axios.create({
     timeout: 10000,
 })
 
-// Response interceptor to handle token refresh
+// Response interceptor to handle token refresh // for scenarios when access token expires and refresh token is still valid
 api.interceptors.response.use(
     (response) => {
         return response;
