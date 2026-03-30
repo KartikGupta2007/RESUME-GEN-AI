@@ -1,5 +1,6 @@
 import { Router} from "express";
 import { registerUser, loginUser, logoutUser, getCurrentUser, changeCurrentPassword } from "../controllers/user.controller.js";
+import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 
 const userRouter = Router();
@@ -27,7 +28,7 @@ userRouter.post("/login", loginUser);
     * @route POST /api/v1/users/logout
     * @access Private
  */
-userRouter.post("/logout", logoutUser);
+userRouter.post("/logout", verifyJWT, logoutUser);
 
 
 /**  
@@ -36,7 +37,7 @@ userRouter.post("/logout", logoutUser);
     * @route POST /api/v1/users/change-password
     * @access Private
  */
-userRouter.post("/change-password", changeCurrentPassword);
+userRouter.post("/change-password", verifyJWT, changeCurrentPassword);
 
 
 /**  
@@ -45,7 +46,7 @@ userRouter.post("/change-password", changeCurrentPassword);
     * @route GET /api/v1/users/me
     * @access Private
  */
-userRouter.get("/me", getCurrentUser);
+userRouter.get("/me", verifyJWT, getCurrentUser);
 
 
 

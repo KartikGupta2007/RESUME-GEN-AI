@@ -1,1 +1,1 @@
-export const DB_Name = "GenAI+FullStack Project";
+export const DB_Name = "GenAIFullStackProject";

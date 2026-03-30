@@ -92,7 +92,6 @@ export const loginUser = asyncHandler(async(req, res) => {
  */
 export const registerUser = asyncHandler(async(req, res) => {
     let { email, password, userName, fullName } = req.body;
-    userName = userName.toLowerCase();
 
     //vaidation
     if (
@@ -102,6 +101,8 @@ export const registerUser = asyncHandler(async(req, res) => {
     ) {
         throw new ApiError(400, "All fields are required")
     }
+
+    userName = userName.toLowerCase();
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -145,6 +146,13 @@ export const registerUser = asyncHandler(async(req, res) => {
  * @access Private
  */
 export const logoutUser = asyncHandler(async (req,res) => {
+    if (!req.user?._id) {
+        throw new ApiError(401, "Unauthorized");
+    }
+    if (!req.user?.
+_id) {
+        throw new ApiError(401, "Unauthorized");
+    }
     // get refresh token from cookies
     // validation - not empty
     // find user with the refresh token in db, if found then remove refresh token from db
@@ -163,7 +171,7 @@ export const logoutUser = asyncHandler(async (req,res) => {
 
     const options = {
         httpOnly: true,
-        secure: true
+        secure: false
     }
 
     return res
@@ -182,6 +190,13 @@ export const logoutUser = asyncHandler(async (req,res) => {
  * @access Private
  */
 export const changeCurrentPassword = asyncHandler(async (req, res) => {
+    if (!req.user?._id) {
+        throw new ApiError(401, "Unauthorized");
+    }
+    if (!req.user?.
+_id) {
+        throw new ApiError(401, "Unauthorized");
+    }
     // get current password and new password from req body
     // validation - not empty
     // find user in db, compare current password with the password in db
@@ -230,6 +245,9 @@ export const changeCurrentPassword = asyncHandler(async (req, res) => {
  * @access Private
  */
 export const getCurrentUser = asyncHandler(async (req, res) => {
+    if (!req.user?._id) {
+        throw new ApiError(401, "Unauthorized");
+    }
     // get user details from req.user which is set in auth middleware after verifying access token
     // return user details in response
     const user = await User.findById(req.user._id).select("-password -refreshToken")

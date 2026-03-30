@@ -5,15 +5,23 @@ import { register, login, logout, getCurrentUser, changeCurrentPassword } from "
 
 export const useAuth = () => {
     const context = useContext(AuthContext)
+    if (!context) {
+        throw new Error("useAuth must be used within AuthProvider")
+    }
     const { user, setUser, loading, setLoading } = context
 
     const handleLogin = async ({ email, password }) => {
         setLoading(true)
         try {
             const data = await login({ email, password })
-            setUser(data.user)
+            if (!data?.data?.user) {
+                return false
+            }
+            setUser(data.data.user)
+            return true
         } catch (err) {
             console.log(err)
+            return false
         } finally {
             setLoading(false)
         }
@@ -23,9 +31,14 @@ export const useAuth = () => {
         setLoading(true)
         try {
             const data = await register({ userName, email, password, fullName })
-            setUser(data.user)
+            if (!data?.data) {
+                return false
+            }
+            setUser(data.data)
+            return true
         } catch (err) {
             console.log(err)
+            return false
         } finally {
             setLoading(false)
         }
@@ -36,8 +49,10 @@ export const useAuth = () => {
         try {
             await logout()
             setUser(null)
+            return true
         } catch (err) {
             console.log(err)
+            return false
         } finally {
             setLoading(false)
         }
@@ -48,8 +63,10 @@ export const useAuth = () => {
         try {
             await changeCurrentPassword({ currentPassword, newPassword ,confirmNewPassword })
             handleLogout() // after changing password, user has to login again with new password, so setting user to null
+            return true
         } catch (err) {
             console.log(err)
+            return false
         } finally {
             setLoading(false)
         }
@@ -59,9 +76,10 @@ export const useAuth = () => {
         const getAndSetUser = async () => {
             try {
                 const data = await getCurrentUser()
-                setUser(data.user)
+                setUser(data?.data ?? null)
             } catch (err) {
                 console.log(err)
+                setUser(null)
             } finally {
                 setLoading(false)
             }

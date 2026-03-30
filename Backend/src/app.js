@@ -3,9 +3,14 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 
 const app = express();
+const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173,http://localhost:5177,http://localhost:5178")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
 app.use(cors({
-    origin: process.env.CORS_ORIGIN,
-    credentials: true
+  origin: allowedOrigins,
+  credentials: true,
 }));
 
 app.use(express.json({
@@ -22,5 +27,16 @@ app.use(cookieParser());
 
 import userRouter from './routes/user.routes.js'
 app.use("/api/v1/users", userRouter)
+
+app.use((err, req, res, next) => {
+    const statusCode = err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+
+    res.status(statusCode).json({
+        success: false,
+        message,
+        errors: err.errors || [],
+    });
+})
 
 export default app;

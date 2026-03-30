@@ -14,8 +14,15 @@ const Register = () => {
     
     const handleSubmit = async (e) => {
         e.preventDefault()
-        await handleRegister({username,email,password,fullName})
-        navigate("/")
+        const isRegistered = await handleRegister({
+            userName: username,
+            email,
+            password,
+            fullName,
+        })
+        if (isRegistered) {
+            navigate("/login")
+        }
     }
 
     if(loading){
@@ -25,9 +32,15 @@ const Register = () => {
     return (
         <main>
             <div className="form-container">
-                <h1>Register</h1>
+                <h1><u>Register Now</u></h1><br></br>
 
                 <form onSubmit={handleSubmit}>
+                    <div className="input-group">
+                        <label htmlFor="fullName">Full Name</label>
+                        <input
+                            onChange={(e) => { setFullName(e.target.value) }}
+                            type="text" id="fullName" name='fullName' placeholder='Enter full name' />
+                    </div>
 
                     <div className="input-group">
                         <label htmlFor="username">Username</label>
@@ -47,12 +60,7 @@ const Register = () => {
                             onChange={(e) => { setPassword(e.target.value) }}
                             type="password" id="password" name='password' placeholder='Enter password' />
                     </div>
-                    <div className="input-group">
-                        <label htmlFor="fullName">Full Name</label>
-                        <input
-                            onChange={(e) => { setFullName(e.target.value) }}
-                            type="text" id="fullName" name='fullName' placeholder='Enter full name' />
-                    </div>
+                    
 
                     <button className='button primary-button' >Register</button>
 
