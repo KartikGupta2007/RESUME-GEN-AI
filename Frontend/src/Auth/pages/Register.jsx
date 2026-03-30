@@ -1,4 +1,4 @@
-import {useState} from 'react'
+import {useState, useEffect} from 'react'
 import { useNavigate, Link } from 'react-router'
 import { useAuth } from '../context/useAuth.js'
 
@@ -10,8 +10,14 @@ const Register = () => {
     const [ password, setPassword ] = useState("")
     const [ fullName, setFullName ] = useState("")
 
-    const {loading,handleRegister} = useAuth()
+    const {user, loading, handleRegister} = useAuth()
     
+    useEffect(() => {
+        if (user) {
+            navigate('/')
+        }
+    }, [user, navigate])
+
     const handleSubmit = async (e) => {
         e.preventDefault()
         const isRegistered = await handleRegister({

@@ -1,5 +1,5 @@
 import { Router} from "express";
-import { registerUser, loginUser, logoutUser, getCurrentUser, changeCurrentPassword } from "../controllers/user.controller.js";
+import { registerUser, loginUser, logoutUser, getCurrentUser, changeCurrentPassword, refreshAccessToken } from "../controllers/user.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 
@@ -49,5 +49,12 @@ userRouter.post("/change-password", verifyJWT, changeCurrentPassword);
 userRouter.get("/me", verifyJWT, getCurrentUser);
 
 
+/**
+ * @name refreshAccessToken
+ * @description Api to refresh access token
+ * @route POST /api/v1/users/refresh-token
+ * @access Public
+ */
+userRouter.post("/refresh-token", refreshAccessToken);
 
 export default userRouter;

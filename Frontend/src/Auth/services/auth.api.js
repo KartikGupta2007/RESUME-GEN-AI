@@ -6,6 +6,38 @@ const api = axios.create({
     timeout: 10000,
 })
 
+// Response interceptor to handle token refresh
+api.interceptors.response.use(
+    (response) => {
+        return response;
+    },
+    async (error) => {
+        const originalRequest = error.config;
+        // If error is 401 and not a retry yet (or avoiding infinite loop)
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            // Prevent from intercepting requests to the refresh-token or login endpoints
+            if (originalRequest.url === '/api/v1/users/refresh-token' || originalRequest.url === '/api/v1/users/login') {
+                return Promise.reject(error);
+            }
+            originalRequest._retry = true;
+            try {
+                // Manually hit the refresh endpoint
+                await axios.post(
+                    "http://localhost:3000/api/v1/users/refresh-token",
+                    {},
+                    { withCredentials: true }
+                );
+                // Retry the original request
+                return api(originalRequest);
+            } catch (refreshError) {
+                // If refresh token also fails, we can't do much, user might need to login again
+                return Promise.reject(refreshError);
+            }
+        }
+        return Promise.reject(error);
+    }
+);
+
 export async function register({ userName, email, password, fullName }) {
     const response = await api.post('/api/v1/users/register', {
         email, password, userName, fullName
