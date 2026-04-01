@@ -41,7 +41,7 @@ export default async function generateInterviewReportByOpenAi({ resume, selfDesc
 `
 
     const response = await client.responses.parse({
-    model: "gpt-4.1",
+    model: "gpt-4o",
     temperature: 0.3,
     input: prompt,
     text: {

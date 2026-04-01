@@ -38,6 +38,8 @@ api.interceptors.response.use(
     }
 );
 
+export default api;
+
 export async function register({ userName, email, password, fullName }) {
     const response = await api.post('/api/v1/users/register', {
         email, password, userName, fullName

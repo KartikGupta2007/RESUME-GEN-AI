@@ -6,13 +6,10 @@ import Login from './Auth/pages/Login.jsx'
 import Register from './Auth/pages/Register.jsx'
 import Protected from './Auth/components/Protected.jsx'
 import { AuthProvider } from './Auth/context/auth.context.jsx'
+import { InterviewProvider } from './Interview/context/interview.context.jsx'
 import './style.scss'
-
-const Home = () => (
-    <main>
-        <h1>Welcome</h1>
-    </main>
-)
+import Home from './Interview/pages/Home.jsx'
+import Interview from './Interview/pages/Interview.jsx' 
 
 const router = createBrowserRouter([
     {
@@ -27,12 +24,18 @@ const router = createBrowserRouter([
         path: "/",
         element: <Protected><Home /></Protected>
     },
+    {
+        path:"/interview/:interviewId",
+        element: <Protected><Interview /></Protected>
+    },
 ])
 
 createRoot(document.getElementById('root')).render(
     <React.StrictMode>
         <AuthProvider>
-            <RouterProvider router={router} />
+            <InterviewProvider>
+                <RouterProvider router={router} />
+            </InterviewProvider>
         </AuthProvider>
     </React.StrictMode>
 )

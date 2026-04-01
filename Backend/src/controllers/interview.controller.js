@@ -1,5 +1,5 @@
 import generateInterviewReportByOpenAi from "../services/ai.service.js";
-import pdfParse from "pdf-parse";
+import {PDFParse} from "pdf-parse";
 import PDFDocument from "pdfkit";
 import { InterviewReport } from "../models/interviewReport.model.js";
 
@@ -7,7 +7,7 @@ export const generateInterviewReport = async(req,res)=>{
     try {
         const resume = req.file.buffer;
         // const resumeData = await (new pdfParse.PDFParse(Uint8Array.from(resume))).getText();
-        const resumeData = await pdfParse(resume);
+        const resumeData = await PDFParse(resume);
 
         const selfDescription = req.body.selfDescription;
         const jobDescription = req.body.jobDescription;
@@ -40,7 +40,7 @@ export const generateInterviewReport = async(req,res)=>{
 
 export async function getAllInterviewReports(req, res) {
     try {
-        const interviewReports = await InterviewReport.findOne({ user: req.user.id }).sort({ createdAt: -1 }).select("-resume -selfDescription -jobDescription -__v -technicalQuestions -behavioralQuestions -skillGaps -preparationPlan")
+        const interviewReports = await InterviewReport.find({ user: req.user._id }).sort({ createdAt: -1 }).select("-resume -selfDescription -jobDescription -__v -technicalQuestions -behavioralQuestions -skillGaps -preparationPlan")
     
         if(!interviewReports){
             return res.status(404).json({
@@ -65,7 +65,7 @@ export async function getAllInterviewReports(req, res) {
 export async function getInterviewReportById(req, res) {
     try {
         const { interviewId } = req.params
-        const interviewReport = await InterviewReport.findOne({ _id: interviewId, user: req.user.id })
+        const interviewReport = await InterviewReport.findOne({ _id: interviewId, user: req.user._id })
     
         if (!interviewReport) {
             return res.status(404).json({
@@ -91,7 +91,7 @@ export async function generateResumePdf(req, res) {
         const { interviewReportId } = req.params;
         const interviewReport = await InterviewReport.findOne({
             _id: interviewReportId,
-            user: req.user.id
+            user: req.user._id
         });
         if (!interviewReport) {
             return res.status(404).json({
@@ -109,7 +109,6 @@ export async function generateResumePdf(req, res) {
         doc.text("\n\nSelf Description\n\n");
         doc.text(interviewReport.selfDescription);
         doc.end();
-        return res.status(200);
     } catch (error) {
         res.status(500).json({
             message: error.message
