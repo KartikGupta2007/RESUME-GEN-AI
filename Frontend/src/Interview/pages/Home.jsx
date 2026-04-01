@@ -4,6 +4,8 @@ import { useInterview } from '../hooks/useInterview.js'
 import { useNavigate } from 'react-router'
 import Loading from '../components/Loading.jsx'
 
+const JOB_DESCRIPTION_MAX_CHARS = 5000
+
 const Home = () => {
     const { loading, generateReport,reports } = useInterview()
     const [ jobDescription, setJobDescription ] = useState("")
@@ -89,12 +91,13 @@ const Home = () => {
                             <span className='badge badge--required'>Required</span>
                         </div>
                         <textarea
+                            value={jobDescription}
                             onChange={(e) => { setJobDescription(e.target.value) }}
                             className='panel__textarea'
                             placeholder={`Paste the full job description here...\ne.g. 'Senior Frontend Engineer at Google requires proficiency in React, TypeScript, and large-scale system design...'`}
-                            maxLength={5000}
+                            maxLength={JOB_DESCRIPTION_MAX_CHARS}
                         />
-                        <div className='char-counter'>0 / 5000 chars</div>
+                        <div className='char-counter'>{jobDescription.length} / {JOB_DESCRIPTION_MAX_CHARS} chars</div>
                     </div>
 
                     {/* Vertical Divider */}
