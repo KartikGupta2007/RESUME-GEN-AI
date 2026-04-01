@@ -1,6 +1,6 @@
 import {useState, useEffect} from 'react'
 import { useNavigate, Link } from 'react-router'
-import "../styles/Auth.style.scss"
+import "../styles/auth.style.scss"
 import { useAuth } from '../context/useAuth.js'
 import Loading from '../components/Loading.jsx'
 
