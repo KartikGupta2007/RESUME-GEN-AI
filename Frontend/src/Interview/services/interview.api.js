@@ -6,9 +6,9 @@ import api from "../../Auth/services/auth.api";
 export const generateInterviewReport = async ({ jobDescription, selfDescription, resumeFile }) => {
     //formdata is used to send both fle and text at the same time in the request body
     const formData = new FormData()
-    formData.append("jobDescription", jobDescription)
-    formData.append("selfDescription", selfDescription)
-    formData.append("resume", resumeFile)
+    if (jobDescription) formData.append("jobDescription", jobDescription)
+    if (selfDescription) formData.append("selfDescription", selfDescription)
+    if (resumeFile) formData.append("resume", resumeFile)
     const response = await api.post("/api/v1/interview/", formData, {
         headers: {
             "Content-Type": "multipart/form-data"

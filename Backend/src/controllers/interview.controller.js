@@ -5,22 +5,27 @@ import { InterviewReport } from "../models/interviewReport.model.js";
 
 export const generateInterviewReport = async(req,res)=>{
     try {
-        const resume = req.file.buffer;
-        // const resumeData = await (new pdfParse.PDFParse(Uint8Array.from(resume))).getText();
-        const resumeData = await PDFParse(resume);
+        const resume = req.file?.buffer;
+        let resumeText = "";
+        if (resume) {
+            const parser = new PDFParse({ data: resume });
+            const resumeData = await parser.getText();
+            resumeText = resumeData.text;
+        }
 
-        const selfDescription = req.body.selfDescription;
-        const jobDescription = req.body.jobDescription;
+        const selfDescription = req.body.selfDescription || "";
+        const jobDescription = req.body.jobDescription || "";
     
         const interviewReportByAi = await generateInterviewReportByOpenAi({
-            resume: resumeData.text,
+            resume: resumeText,
             selfDescription,
             jobDescription
         })
         const interviewReport = await InterviewReport.create({
             ...interviewReportByAi,
+            jobTitle: interviewReportByAi.title,
             user: req.user._id,
-            resume: resumeData.text,
+            resume: resumeText,
             selfDescription,
             jobDescription
         })

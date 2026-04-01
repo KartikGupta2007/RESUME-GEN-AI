@@ -35,12 +35,12 @@ export const useInterview = () => {
         try {
             response = await getInterviewReportById(interviewId)
             setReport(response.interviewReport)
+            return response.interviewReport
         } catch (error) {
             console.log(error)
         } finally {
             setLoading(false)
         }
-        return response.interviewReport
     }
 
     const getReports = async () => {
@@ -49,13 +49,12 @@ export const useInterview = () => {
         try {
             response = await getAllInterviewReports()
             setReports(response.interviewReports)
+            return response.interviewReports
         } catch (error) {
             console.log(error)
         } finally {
             setLoading(false)
         }
-
-        return response.interviewReports
     }
 
     const getResumePdf = async (interviewReportId) => {

@@ -9,14 +9,25 @@ const Home = () => {
     const { loading, generateReport,reports } = useInterview()
     const [ jobDescription, setJobDescription ] = useState("")
     const [ selfDescription, setSelfDescription ] = useState("")
+    const [ resumeFileName, setResumeFileName ] = useState("")
     const resumeInputRef = useRef()
 
     const navigate = useNavigate()
 
     const handleGenerateReport = async () => {
-        const resumeFile = resumeInputRef.current.files[ 0 ]
-        const data = await generateReport({ jobDescription, selfDescription, resumeFile })
-        navigate(`/interview/${data._id}`)
+        try {
+            const resumeFile = resumeInputRef.current?.files?.[ 0 ]
+            const data = await generateReport({ jobDescription, selfDescription, resumeFile })
+            if (data?._id) {
+                navigate(`/interview/${data._id}`)
+            } else {
+                console.error("No valid data returned", data)
+                alert("Failed to generate report. Please try again.")
+            }
+        } catch (error) {
+            console.error(error)
+            alert("An error occurred")
+        }
     }
 
     if (loading) {
@@ -28,7 +39,16 @@ const Home = () => {
     }
 
     return (
+        <Protected>
         <div className='home-page'>
+            <nav style={{display: 'flex', justifyContent: 'flex-end', padding: '1rem 2rem', width: '100%', boxSizing: 'border-box', position: 'absolute', top: 0, right: 0}}>
+                <button 
+                    onClick={() => navigate('/profile')} 
+                    style={{padding: '0.6rem 1.2rem', borderRadius: '0.5rem', background: '#ff2d78', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 4px 6px rgba(0,0,0,0.1)'}}
+                >
+                    My Profile
+                </button>
+            </nav>
 
             {/* Page Header */}
             <header className='page-header'>
@@ -77,12 +97,38 @@ const Home = () => {
                                 <span className='badge badge--best'>Best Results</span>
                             </label>
                             <label className='dropzone' htmlFor='resume'>
-                                <span className='dropzone__icon'>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 16 12 12 8 16" /><line x1="12" y1="12" x2="12" y2="21" /><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" /></svg>
-                                </span>
-                                <p className='dropzone__title'>Click to upload or drag &amp; drop</p>
-                                <p className='dropzone__subtitle'>PDF or DOCX (Max 5MB)</p>
-                                <input ref={resumeInputRef} hidden type='file' id='resume' name='resume' accept='.pdf,.docx' />
+                                {resumeFileName ? (
+                                    <>
+                                        <span className='dropzone__icon' style={{color: '#ff2d78'}}>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                                        </span>
+                                        <p className='dropzone__title' style={{fontWeight: 'bold', color: '#ff2d78'}}>{resumeFileName}</p>
+                                        <p className='dropzone__subtitle'>Click to change file</p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className='dropzone__icon'>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 16 12 12 8 16" /><line x1="12" y1="12" x2="12" y2="21" /><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" /></svg>
+                                        </span>
+                                        <p className='dropzone__title'>Click to upload or drag &amp; drop</p>
+                                        <p className='dropzone__subtitle'>PDF Only (Max 5MB)</p>
+                                    </>
+                                )}
+                                <input 
+                                    ref={resumeInputRef} 
+                                    hidden 
+                                    type='file' 
+                                    id='resume' 
+                                    name='resume' 
+                                    accept='.pdf' 
+                                    onChange={(e) => {
+                                        if (e.target.files.length > 0) {
+                                            setResumeFileName(e.target.files[0].name)
+                                        } else {
+                                            setResumeFileName("")
+                                        }
+                                    }}
+                                />
                             </label>
                         </div>
 
@@ -130,7 +176,7 @@ const Home = () => {
                     <ul className='reports-list'>
                         {reports.map(report => (
                             <li key={report._id} className='report-item' onClick={() => navigate(`/interview/${report._id}`)}>
-                                <h3>{report.title || 'Untitled Position'}</h3>
+                                <h3>{report.jobTitle || report.title || 'Untitled Position'}</h3>
                                 <p className='report-meta'>Generated on {new Date(report.createdAt).toLocaleDateString()}</p>
                                 <p className={`match-score ${report.matchScore >= 80 ? 'score--high' : report.matchScore >= 60 ? 'score--mid' : 'score--low'}`}>Match Score: {report.matchScore}%</p>
                             </li>
@@ -146,6 +192,7 @@ const Home = () => {
                 <a href='#'>Help Center</a>
             </footer>
         </div>
+        </Protected>
     )
 }
 

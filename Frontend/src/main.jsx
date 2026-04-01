@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client'
 import Login from './Auth/pages/Login.jsx'
 import Register from './Auth/pages/Register.jsx'
 import Protected from './Auth/components/Protected.jsx'
+import Profile from './Auth/pages/Profile.jsx'
 import { AuthProvider } from './Auth/context/auth.context.jsx'
 import { InterviewProvider } from './Interview/context/interview.context.jsx'
 import './style.scss'
@@ -23,6 +24,10 @@ const router = createBrowserRouter([
     {
         path: "/",
         element: <Protected><Home /></Protected>
+    },
+    {
+        path: "/profile",
+        element: <Protected><Profile /></Protected>
     },
     {
         path:"/interview/:interviewId",
