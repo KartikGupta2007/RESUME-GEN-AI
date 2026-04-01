@@ -33,7 +33,7 @@ const interviewReportSchema = z.object({
     title: z.string().describe("The title of the job for which the interview report is generated"),
 })
 
-export default async function generateInterviewReport({ resume, selfDescription, jobDescription }) {
+export default async function generateInterviewReportByOpenAi({ resume, selfDescription, jobDescription }) {
     const prompt = `Generate an interview report for a candidate with the following details:
                         Resume: ${resume}
                         Self Description: ${selfDescription}

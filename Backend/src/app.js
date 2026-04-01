@@ -25,8 +25,16 @@ app.use(express.static('public'));
 app.use(cookieParser());
 
 
+// ROUTES:
 import userRouter from './routes/user.routes.js'
 app.use("/api/v1/users", userRouter)
+
+import interviewRouter from './routes/interview.routes.js';
+app.use("/api/v1/interview", interviewRouter)
+
+
+
+
 
 app.use((err, req, res, next) => {
     const statusCode = err.statusCode || 500;
