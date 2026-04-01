@@ -1,9 +1,9 @@
 import axios from "axios"
 
 const api = axios.create({
-    baseURL: "http://localhost:3000",
+    baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000",
     withCredentials: true,
-    timeout: 10000,
+    timeout: 30000, // increased timeout for production API calls
 })
 
 // Response interceptor to handle token refresh // for scenarios when access token expires and refresh token is still valid
@@ -23,7 +23,7 @@ api.interceptors.response.use(
             try {
                 // Manually hit the refresh endpoint
                 await axios.post(
-                    "http://localhost:3000/api/v1/users/refresh-token",
+                    `${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/v1/users/refresh-token`,
                     {},
                     { withCredentials: true }
                 );

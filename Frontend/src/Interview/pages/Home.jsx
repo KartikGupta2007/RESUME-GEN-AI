@@ -10,9 +10,32 @@ const Home = () => {
     const [ jobDescription, setJobDescription ] = useState("")
     const [ selfDescription, setSelfDescription ] = useState("")
     const [ resumeFileName, setResumeFileName ] = useState("")
+    const [ isDragging, setIsDragging ] = useState(false)
     const resumeInputRef = useRef()
 
     const navigate = useNavigate()
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+        
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+            const file = files[0];
+            if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+                setResumeFileName(file.name);
+                // Assign to ref so `handleGenerateReport` can access it
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                if (resumeInputRef.current) {
+                    resumeInputRef.current.files = dataTransfer.files;
+                }
+            } else {
+                alert("Please drop a valid PDF file.");
+            }
+        }
+    };
 
     const handleGenerateReport = async () => {
         try {
@@ -96,7 +119,13 @@ const Home = () => {
                                 Upload Resume
                                 <span className='badge badge--best'>Best Results</span>
                             </label>
-                            <label className='dropzone' htmlFor='resume'>
+                            <label className={`dropzone ${isDragging ? 'dropzone--active' : ''}`} htmlFor='resume'
+                                style={isDragging ? {borderColor: '#ff2d78', backgroundColor: 'rgba(255, 45, 120, 0.05)', transform: 'scale(1.02)'} : {transition: 'all 0.2s ease-in-out'}}
+                                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
+                                onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
+                                onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); }}
+                                onDrop={handleDrop}
+                            >
                                 {resumeFileName ? (
                                     <>
                                         <span className='dropzone__icon' style={{color: '#ff2d78'}}>
