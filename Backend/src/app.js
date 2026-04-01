@@ -3,6 +3,8 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 
 const app = express();
+app.set("trust proxy", 1); // Trust the reverse proxy (for Render/Vercel) so secure cookies can be set
+
 const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173,http://localhost:5177,http://localhost:5178")
   .split(",")
   .map((o) => o.trim())
