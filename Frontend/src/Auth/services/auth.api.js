@@ -15,11 +15,11 @@ api.interceptors.response.use(
         const originalRequest = error.config;
         // If error is 401 and not a retry yet (or avoiding infinite loop)
         if (error.response?.status === 401 && !originalRequest._retry) {
+            originalRequest._retry = true;
             // Prevent from intercepting requests to the refresh-token or login endpoints
-            if (originalRequest.url === '/api/v1/users/refresh-token' || originalRequest.url === '/api/v1/users/login') {
+            if (originalRequest.url.includes('/api/v1/users/refresh-token') || originalRequest.url.includes('/api/v1/users/login')) {
                 return Promise.reject(error);
             }
-            originalRequest._retry = true;
             try {
                 // Manually hit the refresh endpoint
                 await axios.post(
@@ -31,6 +31,10 @@ api.interceptors.response.use(
                 return api(originalRequest);
             } catch (refreshError) {
                 // If refresh token also fails, we can't do much, user might need to login again
+                // You could also redirect to /login here or emit an event
+                if(typeof window !== "undefined") {
+                    window.location.href = "/login";
+                }
                 return Promise.reject(refreshError);
             }
         }

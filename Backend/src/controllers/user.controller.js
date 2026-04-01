@@ -295,10 +295,10 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
         }
 
         const options = {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none',
-    };
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production" ? true : true, // Enforce in prod, but keeping true as you explicitly requested it
+            sameSite: 'none',
+        };
 
         const { accessToken, refreshToken: newRefreshToken } = await generateAccessAndRefreshToken(user._id);
 
