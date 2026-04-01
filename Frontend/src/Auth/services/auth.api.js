@@ -1,7 +1,10 @@
 import axios from "axios"
 
+const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:3000").replace(/\/+$/, "")
+let refreshRequest = null
+
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000",
+    baseURL: API_BASE_URL,
     withCredentials: true,
     timeout: 30000, // increased timeout for production API calls
 })
@@ -12,29 +15,37 @@ api.interceptors.response.use(
         return response;
     },
     async (error) => {
-        const originalRequest = error.config;
+        const originalRequest = error.config || {};
+        const requestUrl = originalRequest.url || "";
         // If error is 401 and not a retry yet (or avoiding infinite loop)
         if (error.response?.status === 401 && !originalRequest._retry) {
-            originalRequest._retry = true;
-            // Prevent from intercepting requests to the refresh-token or login endpoints
-            if (originalRequest.url.includes('/api/v1/users/refresh-token') || originalRequest.url.includes('/api/v1/users/login')) {
+            // Prevent from intercepting requests to auth endpoints
+            if (
+                requestUrl.includes('/api/v1/users/refresh-token') ||
+                requestUrl.includes('/api/v1/users/login') ||
+                requestUrl.includes('/api/v1/users/register')
+            ) {
                 return Promise.reject(error);
             }
+
+            originalRequest._retry = true;
             try {
-                // Manually hit the refresh endpoint
-                await axios.post(
-                    `${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/v1/users/refresh-token`,
-                    {},
-                    { withCredentials: true }
-                );
+                // Reuse one refresh request for concurrent 401s.
+                if (!refreshRequest) {
+                    refreshRequest = axios.post(
+                        `${API_BASE_URL}/api/v1/users/refresh-token`,
+                        {},
+                        { withCredentials: true }
+                    ).finally(() => {
+                        refreshRequest = null;
+                    });
+                }
+
+                await refreshRequest;
                 // Retry the original request
                 return api(originalRequest);
             } catch (refreshError) {
-                // If refresh token also fails, we can't do much, user might need to login again
-                // You could also redirect to /login here or emit an event
-                if(typeof window !== "undefined") {
-                    window.location.href = "/login";
-                }
+                // Let route guards/context handle unauthenticated state without forced reload loops.
                 return Promise.reject(refreshError);
             }
         }

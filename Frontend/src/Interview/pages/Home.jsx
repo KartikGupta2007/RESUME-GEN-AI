@@ -2,7 +2,6 @@ import { useState, useRef } from 'react'
 import "../styles/home.scss"
 import { useInterview } from '../hooks/useInterview.js'
 import { useNavigate } from 'react-router'
-import Protected from '../components/Protected.jsx'
 import Loading from '../components/Loading.jsx'
 
 const Home = () => {
@@ -55,14 +54,11 @@ const Home = () => {
 
     if (loading) {
         return (
-            <Protected>
-                <Loading text="Generating your personalized interview strategy..." />
-            </Protected>
+            <Loading text="Generating your personalized interview strategy..." />
         )
     }
 
     return (
-        <Protected>
         <div className='home-page'>
             <nav style={{display: 'flex', justifyContent: 'flex-end', padding: '1rem 2rem', width: '100%', boxSizing: 'border-box', position: 'absolute', top: 0, right: 0}}>
                 <button 
@@ -221,7 +217,6 @@ const Home = () => {
                 <a href='#'>Help Center</a>
             </footer>
         </div>
-        </Protected>
     )
 }
 
