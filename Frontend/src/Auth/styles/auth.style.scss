@@ -27,6 +27,36 @@ main{
 
         gap: 0.5rem;
 
+        .password-field{
+            position: relative;
+            display: flex;
+            align-items: center;
+
+            input{
+                width: 100%;
+                padding-right: 4.5rem;
+            }
+
+            .show-password-btn{
+                position: absolute;
+                right: 0.6rem;
+                top: 50%;
+                transform: translateY(-50%);
+                border: none;
+                background: transparent;
+                color: #e1034d;
+                font-weight: 600;
+                font-size: 0.85rem;
+                cursor: pointer;
+                padding: 0.2rem 0.4rem;
+                border-radius: 0.5rem;
+            }
+
+            .show-password-btn:hover{
+                background: rgba(225, 3, 77, 0.12);
+            }
+        }
+
 
         input{
             border: none;

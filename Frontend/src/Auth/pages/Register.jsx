@@ -9,6 +9,7 @@ const Register = () => {
     const [ email, setEmail ] = useState("")
     const [ password, setPassword ] = useState("")
     const [ fullName, setFullName ] = useState("")
+    const [ showPassword, setShowPassword ] = useState(false)
 
     const {user, loading, handleRegister} = useAuth()
     
@@ -38,7 +39,7 @@ const Register = () => {
     return (
         <main>
             <div className="form-container">
-                <h1><u>Register Now</u></h1><br></br>
+                <h1>Register Now</h1>
 
                 <form onSubmit={handleSubmit}>
                     <div className="input-group">
@@ -62,9 +63,19 @@ const Register = () => {
                     </div>
                     <div className="input-group">
                         <label htmlFor="password">Password</label>
-                        <input
-                            onChange={(e) => { setPassword(e.target.value) }}
-                            type="password" id="password" name='password' placeholder='Enter password' />
+                        <div className="password-field">
+                            <input
+                                onChange={(e) => { setPassword(e.target.value) }}
+                                type={showPassword ? "text" : "password"} id="password" name='password' placeholder='Enter password' />
+                            <button
+                                type="button"
+                                className="show-password-btn"
+                                onClick={() => { setShowPassword((prev) => !prev) }}
+                                aria-label={showPassword ? "Hide password" : "Show password"}
+                            >
+                                {showPassword ? "Hide" : "Show"}
+                            </button>
+                        </div>
                     </div>
                     
 
