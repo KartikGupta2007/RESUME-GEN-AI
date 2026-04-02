@@ -4,6 +4,40 @@ import { asyncHandler } from "../utils/asyncHandler.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import jwt from "jsonwebtoken";
 
+const getCookieOptions = () => {
+    const isProduction = process.env.NODE_ENV === "production"
+    return {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? "none" : "lax",
+        path: "/",
+    }
+}
+
+const validatePasswordStrength = (password) => {
+    if (password.length < 8) {
+        return "Password must be at least 8 characters long"
+    }
+
+    if (!/[A-Z]/.test(password)) {
+        return "Password must include at least one uppercase letter"
+    }
+
+    if (!/[a-z]/.test(password)) {
+        return "Password must include at least one lowercase letter"
+    }
+
+    if (!/[0-9]/.test(password)) {
+        return "Password must include at least one number"
+    }
+
+    if (!/[^A-Za-z0-9]/.test(password)) {
+        return "Password must include at least one special character"
+    }
+
+    return null
+}
+
 /**
  * @name generateAccessAndRefreshToken
  * @description Helper function to generate access and refresh tokens
@@ -61,12 +95,8 @@ export const loginUser = asyncHandler(async(req, res) => {
     const { accessToken, refreshToken } = await generateAccessAndRefreshToken(existingUser._id);
     existingUser.password = undefined;
     existingUser.refreshToken = undefined;
-    
-    const options = {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none',
-    }
+
+        const options = getCookieOptions()
 
     return res.status(200)
     .cookie("accessToken", accessToken, options)
@@ -102,6 +132,11 @@ export const registerUser = asyncHandler(async(req, res) => {
         !fullName || !email || !userName || !password
     ) {
         throw new ApiError(400, "All fields are required")
+    }
+
+    const passwordValidationError = validatePasswordStrength(password)
+    if (passwordValidationError) {
+        throw new ApiError(400, passwordValidationError)
     }
 
     userName = userName.toLowerCase();
@@ -151,10 +186,6 @@ export const logoutUser = asyncHandler(async (req,res) => {
     if (!req.user?._id) {
         throw new ApiError(401, "Unauthorized");
     }
-    if (!req.user?.
-_id) {
-        throw new ApiError(401, "Unauthorized");
-    }
     // get refresh token from cookies
     // validation - not empty
     // find user with the refresh token in db, if found then remove refresh token from db
@@ -171,11 +202,7 @@ _id) {
         }
     )
 
-    const options = {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none',
-    }
+    const options = getCookieOptions()
 
     return res
     .status(200)
@@ -194,10 +221,6 @@ _id) {
  */
 export const changeCurrentPassword = asyncHandler(async (req, res) => {
     if (!req.user?._id) {
-        throw new ApiError(401, "Unauthorized");
-    }
-    if (!req.user?.
-_id) {
         throw new ApiError(401, "Unauthorized");
     }
     // get current password and new password from req body
@@ -294,11 +317,7 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
             throw new ApiError(401, "Refresh token is expired or used");
         }
 
-        const options = {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production" ? true : true, // Enforce in prod, but keeping true as you explicitly requested it
-            sameSite: 'none',
-        };
+        const options = getCookieOptions()
 
         const { accessToken, refreshToken: newRefreshToken } = await generateAccessAndRefreshToken(user._id);
 

@@ -1,7 +1,25 @@
 import axios from "axios"
 
-const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:3000").replace(/\/+$/, "")
+const normalizeUrl = (value) => (value || "").trim().replace(/\/+$/, "")
+
+const API_BASE_URL = (() => {
+    const configuredBaseUrl = normalizeUrl(import.meta.env.VITE_API_URL)
+
+    if (import.meta.env.DEV) {
+        return configuredBaseUrl || "http://localhost:8000"
+    }
+
+    // In production, keep API same-origin so auth cookies stay first-party through Vercel rewrites.
+    if (typeof window !== "undefined" && window.location?.origin) {
+        return normalizeUrl(window.location.origin)
+    }
+
+    return configuredBaseUrl
+})()
+
+export const AUTH_EXPIRED_EVENT = "auth:expired"
 let refreshRequest = null
+let hasNotifiedSessionExpired = false
 
 const api = axios.create({
     baseURL: API_BASE_URL,
@@ -42,10 +60,15 @@ api.interceptors.response.use(
                 }
 
                 await refreshRequest;
+                hasNotifiedSessionExpired = false;
                 // Retry the original request
                 return api(originalRequest);
             } catch (refreshError) {
                 // Let route guards/context handle unauthenticated state without forced reload loops.
+                if (!hasNotifiedSessionExpired && typeof window !== "undefined") {
+                    hasNotifiedSessionExpired = true;
+                    window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
+                }
                 return Promise.reject(refreshError);
             }
         }
@@ -59,6 +82,7 @@ export async function register({ userName, email, password, fullName }) {
     const response = await api.post('/api/v1/users/register', {
         email, password, userName, fullName
     })
+    hasNotifiedSessionExpired = false
     console.log(response.data)
     return response.data
 }
@@ -67,6 +91,7 @@ export async function login({ email, password }) {
     const response = await api.post("/api/v1/users/login", {
         email, password
     })
+    hasNotifiedSessionExpired = false
     return response.data
 }
 

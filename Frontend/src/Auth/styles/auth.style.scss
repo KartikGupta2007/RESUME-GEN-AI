@@ -57,6 +57,28 @@ main{
             }
         }
 
+        .password-rules{
+            margin: 0.25rem 0 0;
+            padding-left: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            font-size: 0.85rem;
+            list-style-type: none;
+
+            li{
+                color: #9ca3af;
+            }
+
+            li.valid{
+                color: #059669;
+            }
+
+            li.invalid{
+                color: #d97706;
+            }
+        }
+
 
         input{
             border: none;
@@ -70,5 +92,11 @@ main{
     a{
         color: #e1034d;
         text-decoration: none;
+    }
+
+    .form-error{
+        margin: 0;
+        color: #e1034d;
+        font-size: 0.9rem;
     }
 }

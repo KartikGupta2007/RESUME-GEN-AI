@@ -41,7 +41,24 @@ const Home = () => {
     const handleGenerateReport = async () => {
         try {
             const resumeFile = resumeInputRef.current?.files?.[ 0 ]
-            const data = await generateReport({ jobDescription, selfDescription, resumeFile })
+            const trimmedJobDescription = jobDescription.trim()
+            const trimmedSelfDescription = selfDescription.trim()
+
+            if (!trimmedJobDescription) {
+                alert("Please add the target job description.")
+                return
+            }
+
+            if (!resumeFile && !trimmedSelfDescription) {
+                alert("Please upload a resume PDF or add a self-description.")
+                return
+            }
+
+            const data = await generateReport({
+                jobDescription: trimmedJobDescription,
+                selfDescription: trimmedSelfDescription,
+                resumeFile
+            })
             if (data?._id) {
                 navigate(`/interview/${data._id}`)
             } else {
@@ -50,7 +67,7 @@ const Home = () => {
             }
         } catch (error) {
             console.error(error)
-            alert("An error occurred")
+            alert(error?.message || "Unable to generate report right now.")
         }
     }
 

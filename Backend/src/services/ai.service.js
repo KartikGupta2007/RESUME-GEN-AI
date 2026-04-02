@@ -5,9 +5,7 @@ import { z } from "zod";
 import dotenv from "dotenv";
 dotenv.config();
 
-const client = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-});
+const AI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
 
 const interviewReportSchema = z.object({
     matchScore: z.number().describe("A score between 0 and 100 indicating how well the candidate's profile matches the job description"),
@@ -34,22 +32,42 @@ const interviewReportSchema = z.object({
 })
 
 export default async function generateInterviewReportByOpenAi({ resume, selfDescription, jobDescription }) {
+    if (!process.env.OPENAI_API_KEY) {
+        const error = new Error("OPENAI_API_KEY is missing on server")
+        error.statusCode = 500
+        throw error
+    }
+
+    const client = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY
+    });
+
     const prompt = `Generate an interview report for a candidate with the following details:
                         Resume: ${resume}
                         Self Description: ${selfDescription}
                         Job Description: ${jobDescription}
 `
 
-    const response = await client.responses.parse({
-    model: "gpt-4o",
-    temperature: 0.3,
-    input: prompt,
-    text: {
-        format: zodTextFormat(interviewReportSchema, "interviewReport"),    
-    },
-    });
-    if (!response.output_parsed) {
-        throw new Error("Failed to parse AI response");
+    try {
+        const response = await client.responses.parse({
+            model: AI_MODEL,
+            temperature: 0.3,
+            input: prompt,
+            text: {
+                format: zodTextFormat(interviewReportSchema, "interviewReport"),
+            },
+        });
+
+        if (!response.output_parsed) {
+            const parseError = new Error("Failed to parse AI response")
+            parseError.statusCode = 502
+            throw parseError
+        }
+
+        return response.output_parsed;
+    } catch (error) {
+        const wrappedError = new Error(error?.error?.message || error?.message || "AI generation failed")
+        wrappedError.statusCode = error?.status || error?.statusCode || 502
+        throw wrappedError
     }
-    return response.output_parsed;
 }

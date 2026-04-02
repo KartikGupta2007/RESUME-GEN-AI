@@ -1,5 +1,5 @@
 import { createContext, useState, useEffect } from "react";
-import { getCurrentUser } from "../services/auth.api.js";
+import { AUTH_EXPIRED_EVENT, getCurrentUser } from "../services/auth.api.js";
 
 export const AuthContext = createContext()
 export const AuthProvider = ({ children }) => { 
@@ -12,13 +12,27 @@ export const AuthProvider = ({ children }) => {
                 const data = await getCurrentUser()
                 setUser(data?.data ?? null)
             } catch (err) {
-                console.log(err)
+                if (err?.response?.status !== 401) {
+                    console.error(err)
+                }
                 setUser(null)
             } finally {
                 setLoading(false)
             }
         }
         initAuth()
+    }, [])
+
+    useEffect(() => {
+        const handleAuthExpired = () => {
+            setUser(null)
+            setLoading(false)
+        }
+
+        window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired)
+        return () => {
+            window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired)
+        }
     }, [])
 
     return (

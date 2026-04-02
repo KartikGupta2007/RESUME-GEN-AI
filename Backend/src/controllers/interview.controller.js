@@ -5,16 +5,46 @@ import { InterviewReport } from "../models/interviewReport.model.js";
 
 export const generateInterviewReport = async(req,res)=>{
     try {
-        const resume = req.file?.buffer;
-        let resumeText = "";
-        if (resume) {
-            const parser = new PDFParse({ data: resume });
-            const resumeData = await parser.getText();
-            resumeText = resumeData.text;
+        if (!req.user?._id) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized request"
+            })
         }
 
-        const selfDescription = req.body.selfDescription || "";
-        const jobDescription = req.body.jobDescription || "";
+        const resume = req.file?.buffer;
+        let resumeText = "";
+
+        const selfDescription = req.body.selfDescription?.trim() || "";
+        const jobDescription = req.body.jobDescription?.trim() || "";
+
+        if (!jobDescription) {
+            return res.status(400).json({
+                success: false,
+                message: "Job description is required"
+            })
+        }
+
+        if (!resume && !selfDescription) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide either a resume PDF or self description"
+            })
+        }
+
+        if (resume) {
+            try {
+                const parser = new PDFParse({ data: resume });
+                const resumeData = await parser.getText();
+                resumeText = resumeData.text || "";
+            } catch (error) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Unable to parse resume PDF. Please upload a valid PDF file.",
+                    error: error?.message
+                })
+            }
+        }
     
         const interviewReportByAi = await generateInterviewReportByOpenAi({
             resume: resumeText,
@@ -35,9 +65,10 @@ export const generateInterviewReport = async(req,res)=>{
             data: interviewReport
         })
     } catch (error) {
-        res.status(500).json({
+        const statusCode = error?.statusCode || error?.status || 500
+        res.status(statusCode).json({
             success: false,
-            message: "Error generating interview report",
+            message: error?.message || "Error generating interview report",
             error: error.message
         })
     }

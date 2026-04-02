@@ -14,13 +14,22 @@ export const useAuth = () => {
         try {
             const data = await login({ email, password })
             if (!data?.data?.user) {
-                return false
+                return {
+                    success: false,
+                    message: data?.message || "Login failed"
+                }
             }
             setUser(data.data.user)
-            return true
+            return {
+                success: true,
+                message: "Login successful"
+            }
         } catch (err) {
-            console.log(err)
-            return false
+            const message = err?.response?.data?.message || "Unable to login right now"
+            return {
+                success: false,
+                message
+            }
         } finally {
             setLoading(false)
         }
@@ -31,13 +40,22 @@ export const useAuth = () => {
         try {
             const data = await register({ userName, email, password, fullName })
             if (!data?.data) {
-                return false
+                return {
+                    success: false,
+                    message: data?.message || "Registration failed"
+                }
             }
             setUser(data.data)
-            return true
+            return {
+                success: true,
+                message: "Registration successful"
+            }
         } catch (err) {
-            console.log(err)
-            return false
+            const message = err?.response?.data?.message || "Unable to register right now"
+            return {
+                success: false,
+                message
+            }
         } finally {
             setLoading(false)
         }
