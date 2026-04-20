@@ -7,9 +7,10 @@ The project currently runs as:
 - Backend on Render (Express + MongoDB)
 - OpenAI-backed report generation
 
-## Demo Video
+## Demo
 
 - Project demo: [Watch here](https://drive.google.com/file/d/1g4LaOSR65tWLiSo8op-gLF1cQgYeCO3o/view?usp=sharing)
+- Deployment demo: [Watch here](https://resume-gen-ai-one.vercel.app/)
 
 ## What This Project Does
 
