@@ -1,34 +1,40 @@
 # RESUME GEN-AI
 
-RESUME GEN-AI is a full-stack application that helps users prepare for interviews by generating a structured AI report from job context and candidate profile data.
+RESUME GEN-AI is a full-stack AI interview preparation platform. It turns resume context, self-description, and a target job description into a structured interview strategy.
 
-The project currently runs as:
-- Frontend on Vercel (Vite + Preact)
-- Backend on Render (Express + MongoDB)
-- OpenAI-backed report generation
+## Live Project
 
-## Demo
+- Frontend (Vercel): https://resume-gen-ai-one.vercel.app/
+- Backend (Render): API served behind Vercel rewrite
 
-- Project demo: [Watch here](https://drive.google.com/file/d/1g4LaOSR65tWLiSo8op-gLF1cQgYeCO3o/view?usp=sharing)
-- Deployment demo: [Watch here](https://resume-gen-ai-one.vercel.app/)
+## Core Features
 
-## What This Project Does
-
-- User authentication with JWT access and refresh tokens
-- Secure session persistence via HttpOnly cookies
-- Resume PDF upload and text extraction
-- AI-generated interview preparation report, including:
-  - match score
-  - technical questions with answer strategy
-  - behavioral questions with answer strategy
-  - skill gaps and severity
-  - day-wise preparation plan
-- Personal report history and detailed report view
-- Resume PDF export from stored interview context
+- AI-generated interview report with:
+  - role match score
+  - technical questions with intention and answer approach
+  - behavioral questions with intention and answer approach
+  - skill-gap analysis with severity
+  - day-wise preparation roadmap
+- Input options:
+  - resume PDF upload and parsing
+  - self-description text
+  - job description text
+- Interview report history and detailed report view
+- Resume context PDF export from stored report data
+- Authentication:
+  - local auth (email/password)
+  - Google sign in/sign up
+  - account linking by email (Google + local)
+  - Google-first users can set a local password in Profile
+- Session lifecycle and reliability:
+  - JWT access + refresh token cookies
+  - refresh-token retry flow with request deduplication
+  - interceptor hardening for auth endpoints
 
 ## Tech Stack
 
 ### Frontend
+
 - Vite
 - Preact
 - React Router
@@ -36,16 +42,17 @@ The project currently runs as:
 - SCSS
 
 ### Backend
+
 - Node.js + Express
 - MongoDB + Mongoose
+- OpenAI SDK + Zod schema parsing
+- pdf-parse
+- PDFKit
 - JWT + bcrypt
 - cookie-parser + CORS
-- multer (memory storage)
-- pdf-parse
-- OpenAI SDK + Zod output parsing
-- PDFKit
+- multer
 
-## Repository Layout
+## Repository Structure
 
 ```text
 RESUME GEN-AI/
@@ -69,7 +76,7 @@ RESUME GEN-AI/
     vercel.json
 ```
 
-## Frontend Route Map
+## Frontend Routes
 
 - /login
 - /register
@@ -77,119 +84,94 @@ RESUME GEN-AI/
 - /profile (protected)
 - /interview/:interviewId (protected)
 
-Auth guarding is handled by Auth context + protected route wrapper.
-
-## Backend API Overview
+## Backend API
 
 Base path: /api/v1
 
-### User Endpoints
+### User Routes
 
 - POST /users/register (public)
 - POST /users/login (public)
+- POST /users/google (public)
 - POST /users/refresh-token (public)
 - POST /users/logout (private)
 - POST /users/change-password (private)
+- POST /users/set-password (private)
 - GET /users/me (private)
 
-### Interview Endpoints
+### Interview Routes
 
 - POST /interview/ (private, multipart/form-data)
 - GET /interview/reports (private)
 - GET /interview/report/:interviewId (private)
 - GET /interview/report/:interviewReportId/resume (private, PDF download)
 
-## API Payload Quick Reference
+## Auth and Session Behavior
 
-### Register
+1. Login or Google auth issues access and refresh cookies.
+2. Private routes use access token via cookie.
+3. Frontend initializes session with GET /api/v1/users/me.
+4. On 401, Axios performs one shared refresh request and retries pending requests.
+5. Refresh failures dispatch an auth-expired event and UI returns to logged-out state.
 
-POST /api/v1/users/register
+Cookie policy is environment-aware:
 
-```json
-{
-  "fullName": "Your Name",
-  "userName": "yourusername",
-  "email": "you@example.com",
-  "password": "your-password"
-}
-```
+- Production: secure=true, sameSite=none, httpOnly=true
+- Development: secure=false, sameSite=lax, httpOnly=true
 
-### Login
+## Google Auth Notes
 
-POST /api/v1/users/login
-
-```json
-{
-  "email": "you@example.com",
-  "password": "your-password"
-}
-```
-
-### Generate Interview Report
-
-POST /api/v1/interview/
-
-Content-Type: multipart/form-data
-
-Fields:
-- jobDescription (string)
-- selfDescription (string, optional)
-- resume (file, optional PDF, max 5 MB)
-
-## Authentication and Session Flow
-
-1. Login issues accessToken + refreshToken cookies.
-2. Access token protects private API routes.
-3. Frontend checks current session via GET /api/v1/users/me on app load.
-4. If access token expires, Axios interceptor calls refresh-token once and retries pending request.
-5. If refresh fails, protected routing naturally returns user to login state.
-
-Cookie options in backend are currently set for hosted HTTPS:
-- httpOnly: true
-- secure: true
-- sameSite: none
+- Frontend uses Google Identity Services with a client ID.
+- Backend verifies Google ID tokens using google-auth-library.
+- For this flow, configure Authorized JavaScript origins in Google Cloud.
+- Redirect URI is not required for the current implementation.
 
 ## Environment Variables
 
-## Backend (Backend/.env)
+### Backend (Backend/.env)
 
-| Name | Required | Example | Purpose |
-|---|---|---|---|
-| PORT | No | 8000 | Backend port (defaults to 8000) |
-| MONGODB_URI | Yes | mongodb+srv://user:pass@cluster | MongoDB base URI |
-| CORS_ORIGIN | Yes | http://localhost:5173 | Allowed frontend origin(s), comma-separated |
-| ACCESS_TOKEN_SECRET | Yes | long-random-string | JWT access token signing secret |
-| ACCESS_TOKEN_EXPIRY | Yes | 15m | Access token lifetime |
-| REFRESH_TOKEN_SECRET | Yes | long-random-string | JWT refresh token signing secret |
-| REFRESH_TOKEN_EXPIRY | Yes | 7d | Refresh token lifetime |
-| OPENAI_API_KEY | Yes | sk-... | OpenAI API key for report generation |
-| NODE_ENV | No | development | Runtime mode |
+| Name | Required | Purpose |
+|---|---|---|
+| CORS_ORIGIN | Yes | Allowed frontend origin(s), comma-separated |
+| PORT | No | API port (defaults to 8000 if not set) |
+| MONGODB_URI | Yes | MongoDB base URI (database name is appended in code) |
+| ACCESS_TOKEN_SECRET | Yes | Access token signing secret |
+| ACCESS_TOKEN_EXPIRY | Yes | Access token expiry |
+| REFRESH_TOKEN_SECRET | Yes | Refresh token signing secret |
+| REFRESH_TOKEN_EXPIRY | Yes | Refresh token expiry |
+| GOOGLE_CLIENT_ID | Yes | Google OAuth client ID used for token verification |
+| OPENAI_API_KEY | Yes | OpenAI key for report generation |
+| OPENAI_MODEL | No | Defaults to gpt-4o-mini |
+| NODE_ENV | No | development or production |
 
-Important backend notes:
-- DB name GenAIFullStackProject is appended in code.
-- If MONGODB_URI ends with a slash, code trims it before connect.
-- CORS_ORIGIN must match deployed frontend origin exactly (no trailing slash).
+Important:
 
-## Frontend (Frontend/.env)
+- CORS_ORIGIN must include your deployed frontend origin exactly.
+- If MONGODB_URI ends with /, connection code trims it.
+- Database name appended by code: GenAIFullStackProject.
 
-| Name | Required | Example | Purpose |
-|---|---|---|---|
-| VITE_API_URL | Yes | http://localhost:8000 | API base used by Axios |
+### Frontend (Frontend/.env)
 
-Production note for this repository:
-- Because Frontend/vercel.json proxies /api to Render, set VITE_API_URL to your Vercel domain, not Render.
-- Example: VITE_API_URL=https://resume-gen-ai-one.vercel.app
+| Name | Required | Purpose |
+|---|---|---|
+| VITE_API_URL | Yes for local dev | Local API base URL while running dev server |
+| VITE_GOOGLE_CLIENT_ID | Yes | Google OAuth client ID for GIS button |
 
-No trailing slash.
+Production behavior:
 
-## Local Setup
+- In production build, API base resolves to current site origin.
+- Vercel rewrite forwards /api/* to Render backend.
+- You can keep VITE_API_URL focused on local development.
+
+## Local Development Setup
 
 ### Prerequisites
 
 - Node.js 18+
-- npm 9+
-- MongoDB Atlas or local MongoDB
+- npm
+- MongoDB instance
 - OpenAI API key
+- Google OAuth web client ID
 
 ### Install
 
@@ -201,72 +183,80 @@ cd ../Frontend
 npm install
 ```
 
-### Run Backend
+### Configure Environment
+
+1. Copy Backend/.env.example to Backend/.env and fill values.
+2. Copy Frontend/.env.example to Frontend/.env and fill values.
+3. Set Frontend VITE_API_URL to your local backend URL (for example http://localhost:3000).
+
+### Run
 
 ```bash
+# terminal 1
 cd Backend
 npm run dev
-```
 
-### Run Frontend
-
-```bash
+# terminal 2
 cd Frontend
 npm run dev
 ```
 
-Defaults:
-- Frontend: http://localhost:5173
-- Backend: http://localhost:8000
+## Deployment (Current Architecture)
 
-## Deployment Guide (Current Architecture)
+### 1) Backend on Render
 
-## 1) Deploy Backend on Render
-
-- Root directory: Backend
+- Root: Backend
 - Build command: npm install
 - Start command: npm start
-- Add all backend environment variables
-- Set CORS_ORIGIN to your Vercel origin (for example https://resume-gen-ai-one.vercel.app)
+- Set all backend environment variables
+- Set CORS_ORIGIN to Vercel frontend origin
 
-## 2) Deploy Frontend on Vercel
+### 2) Frontend on Vercel
 
-- Root directory: Frontend
+- Root: Frontend
 - Build command: npm run build
-- Output directory: dist
-- Add VITE_API_URL as your Vercel domain
+- Output: dist
+- Set VITE_GOOGLE_CLIENT_ID
 
-This project already includes Frontend/vercel.json rewrites:
-- /api/(.*) -> Render API
-- /(.*) -> /index.html
+This repository includes Frontend/vercel.json rewrites:
+
+- /api/(.*) -> Render backend /api/$1
+- /(.*) -> /index.html (SPA fallback)
 
 ## Scripts
 
 ### Backend
+
 - npm run dev
 - npm start
-- npm test (currently mapped to nodemon server run)
+- npm test (currently same runtime command as dev)
 
 ### Frontend
+
 - npm run dev
 - npm run build
 - npm run preview
 
-## Data Model Summary
+## Data Models
 
 ### User
+
 - userName
 - email
-- password (hashed)
+- password (optional for Google-only account until password is set)
 - fullName
+- authProvider (local or google)
+- googleId
+- avatarUrl
 - refreshToken
 
 ### InterviewReport
+
 - jobDescription
 - jobTitle
 - resume (parsed text)
 - selfDescription
-- matchScore
+- matchScore (0-100)
 - technicalQuestions[]
 - behavioralQuestions[]
 - skillGaps[]
@@ -274,59 +264,34 @@ This project already includes Frontend/vercel.json rewrites:
 - user reference
 - timestamps
 
-## AI Generation Details
-
-- Uses OpenAI model gpt-4o
-- Uses Zod schema parsing to enforce structured response
-- Stores parsed result directly in InterviewReport collection
-
 ## Troubleshooting
 
-### 404 on /login after refresh in production
+### 401 on session endpoints
 
-Cause: missing SPA fallback rewrite.
+Check:
 
-Fix: ensure Vercel rewrite sends all non-API routes to /index.html.
+- CORS_ORIGIN contains deployed frontend origin
+- Browser cookies are allowed
+- Backend and frontend are both redeployed after env updates
 
-### 401 on /api/v1/users/me
+### Google sign-in not rendering
 
-Possible causes:
-- no auth cookies yet (normal before login)
-- expired access token and invalid refresh token
-- origin mismatch between Vercel and Render CORS setting
+Check:
 
-Fix:
-- verify CORS_ORIGIN on Render equals deployed Vercel origin
-- verify VITE_API_URL on Vercel equals Vercel domain when using proxy
-- redeploy after env var updates
+- VITE_GOOGLE_CLIENT_ID is set in frontend environment
+- Authorized JavaScript origins include current frontend URL
 
-### Infinite auth retry loops
+### API works locally but fails in production
 
-Fix in current codebase:
-- refresh endpoint is excluded from retry interception
-- single shared refresh request is used for concurrent 401 responses
-- hard redirect inside interceptor has been removed
+Check:
 
-### 405 method not allowed
+- Vercel rewrite target points to correct Render backend URL
+- Render backend is healthy and exposes /api/v1 routes
+- NODE_ENV is production on backend for secure cookie behavior
 
-Cause: wrong request method or rewrite mismatch.
+## Future Improvements
 
-Fix:
-- verify frontend uses correct HTTP method for endpoint
-- verify vercel.json API rewrite points to Render /api path
-
-### CORS error with credentials
-
-Cause: wildcard origin with credentials.
-
-Fix:
-- use explicit origins in CORS_ORIGIN only
-- include withCredentials in frontend Axios requests
-
-## Security and Hardening Suggestions
-
-- Add rate limiting on auth endpoints.
-- Add request validation middleware on all routes.
-- Add audit logging and request IDs.
-- Add integration tests for auth refresh lifecycle.
-- Add CI checks for lint/build/test.
+- Rate limiting and abuse protection on auth endpoints
+- Request validation middleware for all APIs
+- Automated tests for auth refresh lifecycle and core interview flows
+- CI pipeline for build and test checks
