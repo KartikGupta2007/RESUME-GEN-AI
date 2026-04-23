@@ -1,5 +1,5 @@
 import { Router} from "express";
-import { registerUser, loginUser, logoutUser, getCurrentUser, changeCurrentPassword, refreshAccessToken } from "../controllers/user.controller.js";
+import { registerUser, loginUser, logoutUser, getCurrentUser, changeCurrentPassword, setGoogleAccountPassword, refreshAccessToken, googleAuth } from "../controllers/user.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 
@@ -21,6 +21,14 @@ userRouter.post("/register", registerUser);
  */
 userRouter.post("/login", loginUser);
 
+/**  
+    * @name googleAuth
+    * @description Api to handle Google sign in/sign up
+    * @route POST /api/v1/users/google
+    * @access Public
+ */
+userRouter.post("/google", googleAuth);
+
 
 /**  
     * @name logoutUser
@@ -38,6 +46,14 @@ userRouter.post("/logout", verifyJWT, logoutUser);
     * @access Private
  */
 userRouter.post("/change-password", verifyJWT, changeCurrentPassword);
+
+/**  
+    * @name setGoogleAccountPassword
+    * @description Api to set password for Google-authenticated account
+    * @route POST /api/v1/users/set-password
+    * @access Private
+ */
+userRouter.post("/set-password", verifyJWT, setGoogleAccountPassword);
 
 
 /**  

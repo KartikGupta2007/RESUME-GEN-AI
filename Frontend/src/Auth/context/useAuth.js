@@ -1,6 +1,6 @@
 import { useContext } from "react";
 import { AuthContext } from "./auth.context.jsx";
-import { register, login, logout, changeCurrentPassword } from "../services/auth.api.js";
+import { register, login, logout, changeCurrentPassword, setGoogleAccountPassword, googleAuth } from "../services/auth.api.js";
 
 export const useAuth = () => {
     const context = useContext(AuthContext)
@@ -29,6 +29,32 @@ export const useAuth = () => {
             return {
                 success: false,
                 message
+            }
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleGoogleAuth = async ({ credential }) => {
+        setLoading(true)
+        try {
+            const data = await googleAuth({ credential })
+            if (!data?.data?.user) {
+                return {
+                    success: false,
+                    message: data?.message || "Google sign-in failed"
+                }
+            }
+            setUser(data.data.user)
+            return {
+                success: true,
+                message: data?.message || "Google sign-in successful"
+            }
+        } catch (err) {
+            const message = err?.response?.data?.message || "Unable to sign in with Google right now"
+            return {
+                success: false,
+                message,
             }
         } finally {
             setLoading(false)
@@ -68,7 +94,7 @@ export const useAuth = () => {
             setUser(null)
             return true
         } catch (err) {
-            console.log(err)
+            // console.log(err)
             return false
         } finally {
             setLoading(false)
@@ -78,16 +104,44 @@ export const useAuth = () => {
     const handleChangePassword = async ({ currentPassword, newPassword ,confirmNewPassword }) => {
         setLoading(true)
         try {
-            await changeCurrentPassword({ currentPassword, newPassword ,confirmNewPassword })
-            handleLogout() // after changing password, user has to login again with new password, so setting user to null
-            return true
+            const data = await changeCurrentPassword({ currentPassword, newPassword ,confirmNewPassword })
+            setUser(null)
+            return {
+                success: true,
+                message: data?.message || "Password changed successfully, please login again with new password",
+            }
         } catch (err) {
-            console.log(err)
-            return false
+            const message = err?.response?.data?.message || "Unable to change password right now"
+            return {
+                success: false,
+                message,
+            }
         } finally {
             setLoading(false)
         }
     }
 
-    return { user, loading, handleRegister, handleLogin, handleLogout, handleChangePassword }
+    const handleSetGooglePassword = async ({ newPassword, confirmNewPassword }) => {
+        setLoading(true)
+        try {
+            const data = await setGoogleAccountPassword({ newPassword, confirmNewPassword })
+            if (data?.data?.user) {
+                setUser(data.data.user)
+            }
+            return {
+                success: true,
+                message: data?.message || "Password set successfully"
+            }
+        } catch (err) {
+            const message = err?.response?.data?.message || "Unable to set password right now"
+            return {
+                success: false,
+                message,
+            }
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    return { user, loading, handleRegister, handleLogin, handleGoogleAuth, handleLogout, handleChangePassword, handleSetGooglePassword }
 }

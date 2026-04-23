@@ -3,6 +3,9 @@ import { ApiError } from "../utils/ApiError.js"
 import { asyncHandler } from "../utils/asyncHandler.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import jwt from "jsonwebtoken";
+import { OAuth2Client } from "google-auth-library";
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const getCookieOptions = () => {
     const isProduction = process.env.NODE_ENV === "production"
@@ -38,6 +41,58 @@ const validatePasswordStrength = (password) => {
     return null
 }
 
+const sanitizeUserName = (value) => value
+    ?.toLowerCase()
+    ?.replace(/[^a-z0-9._-]/g, "")
+    ?.replace(/^[^a-z0-9]+/, "")
+
+const generateUniqueUserName = async (baseValue, email) => {
+    const normalizedBase = sanitizeUserName(baseValue) || "user"
+    const normalizedEmailBase = sanitizeUserName(email?.split("@")[0]) || normalizedBase
+
+    const candidatePool = [
+        normalizedBase,
+        `${normalizedBase}.${normalizedEmailBase}`,
+        `${normalizedEmailBase}.${normalizedBase}`,
+        normalizedEmailBase,
+    ]
+
+    for (const candidate of candidatePool) {
+        if (candidate && !(await User.findOne({ userName: candidate }))) {
+            return candidate
+        }
+    }
+
+    let suffix = 1
+    let candidate = `${normalizedBase}.${normalizedEmailBase}${suffix}`
+
+    while (await User.findOne({ userName: candidate })) {
+        suffix += 1
+        candidate = `${normalizedBase}.${normalizedEmailBase}${suffix}`
+    }
+
+    return candidate
+}
+
+const serializePublicUser = (userDoc) => {
+    if (!userDoc) {
+        return null
+    }
+
+    const userObject = typeof userDoc.toObject === "function"
+        ? userDoc.toObject()
+        : { ...userDoc }
+
+    const hasPassword = Boolean(userDoc.password)
+    delete userObject.password
+    delete userObject.refreshToken
+
+    return {
+        ...userObject,
+        hasPassword,
+    }
+}
+
 /**
  * @name generateAccessAndRefreshToken
  * @description Helper function to generate access and refresh tokens
@@ -71,6 +126,7 @@ export const loginUser = asyncHandler(async(req, res) => {
     // send access token in response and refresh token in http only cookie
 
     let { email, password } = req.body;
+    email = email?.trim()?.toLowerCase()
     if ([email, password].some((field) => field?.trim() === "")
         ||
         !email || !password
@@ -86,6 +142,10 @@ export const loginUser = asyncHandler(async(req, res) => {
         throw new ApiError(400, "Invalid credentials");
     }
 
+    if (existingUser.authProvider === "google" && !existingUser.password) {
+        throw new ApiError(400, "Please sign in with Google first and set your password in My Profile before logging in locally");
+    }
+
     const isPasswordCorrect = await existingUser.comparePassword(password);
     if (!isPasswordCorrect) {
         throw new ApiError(400, "Invalid credentials");
@@ -93,10 +153,9 @@ export const loginUser = asyncHandler(async(req, res) => {
 
     
     const { accessToken, refreshToken } = await generateAccessAndRefreshToken(existingUser._id);
-    existingUser.password = undefined;
-    existingUser.refreshToken = undefined;
+    const loggedInUser = serializePublicUser(existingUser)
 
-        const options = getCookieOptions()
+    const options = getCookieOptions()
 
     return res.status(200)
     .cookie("accessToken", accessToken, options)
@@ -105,7 +164,7 @@ export const loginUser = asyncHandler(async(req, res) => {
         new ApiResponse( 
             200, 
             {
-                user : existingUser,
+                user : loggedInUser,
                 accessToken, refreshToken
             }, 
             "User logged in successfully"
@@ -124,6 +183,7 @@ export const loginUser = asyncHandler(async(req, res) => {
  */
 export const registerUser = asyncHandler(async(req, res) => {
     let { email, password, userName, fullName } = req.body;
+    email = email?.trim()?.toLowerCase();
 
     //vaidation
     if (
@@ -156,13 +216,12 @@ export const registerUser = asyncHandler(async(req, res) => {
         email,
         password,
         userName,
-        fullName
+        fullName,
+        authProvider: "local",
     });
 
     //now from the created user we have to remove password and refresh token field, we can do it by findById and select method of mongoose
-    const createdUser = await User.findById(newUser._id).select(
-        "-password -refreshToken"
-    ) // syntax to exclude fields in mongoose
+    const createdUser = serializePublicUser(newUser)
 
 
     if (!createdUser) {
@@ -172,8 +231,107 @@ export const registerUser = asyncHandler(async(req, res) => {
         new ApiResponse(201, createdUser, "User registered Successfully")
     )
 });
+// _____________________________________________________________________________________________
+/**
+ * @name googleAuth
+ * @description Controller to handle Google login/sign-up
+ * @route POST /api/v1/users/google
+ * @access Public
+ */
+export const googleAuth = asyncHandler(async (req, res) => {
+    const { credential } = req.body;
 
+    if (!credential) {
+        throw new ApiError(400, "Google credential is required");
+    }
 
+    if (!process.env.GOOGLE_CLIENT_ID) {
+        throw new ApiError(500, "Google auth is not configured on the server");
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+        idToken: credential,
+        audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+
+    if (!payload?.email || !payload?.sub) {
+        throw new ApiError(401, "Unable to verify Google account");
+    }
+
+    if (!payload?.email_verified){
+        throw new ApiError(401, "Google account email is not verified");
+    }
+
+    const email = payload.email.trim().toLowerCase();
+    const googleId = payload.sub;
+    const fullName = payload.name || payload.given_name || email.split("@")[0];
+    const avatarUrl = payload.picture || "";
+
+    let user = await User.findOne({
+        $or: [{ googleId }, { email }],
+    });
+
+    if (!user) {
+        const userName = await generateUniqueUserName(payload.given_name || payload.name || email.split("@")[0], email);
+
+        user = await User.create({
+            userName,
+            email,
+            fullName,
+            authProvider: "google",
+            googleId,
+            avatarUrl,
+        });
+    } else {
+        // link google account, if same user have logged in with local auth previously with same email, then we can link google account by saving googleId and avatarUrl in db, so that next time when user tries to login with google then we can find the user by googleId and allow login, if googleId is not present but email is same then also we can allow login but we have to save googleId in db for future logins, this linking will be done only first time when user tries to login with google, after that user can login with google or local auth as per their choice without any issue
+        let shouldSave = false;
+
+        if (!user.googleId){
+            user.googleId = googleId;
+            shouldSave = true;
+        }
+
+        if (!user.avatarUrl && avatarUrl) {
+            user.avatarUrl = avatarUrl;
+            shouldSave = true;
+        }
+
+        if (!user.fullName && fullName) {
+            user.fullName = fullName;
+            shouldSave = true;
+        }
+
+        if (shouldSave) {
+            await user.save({ validateBeforeSave: false });
+        }
+    }
+
+    const authenticatedUser = serializePublicUser(user)
+
+    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id)
+
+    const options = getCookieOptions()
+
+    return res
+        .status(200)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", refreshToken, options)
+        .json(
+            new ApiResponse(
+                200,
+                {
+                    user: authenticatedUser,
+                    accessToken,
+                    refreshToken,
+                },
+                "Google authentication successful"
+            )
+        )
+});
+
+// _____________________________________________________________________________________________
 
 
 /**
@@ -245,9 +403,12 @@ export const changeCurrentPassword = asyncHandler(async (req, res) => {
     if (!user) {
         throw new ApiError(404, "Please login again to change the password")
     }
+    if (user.authProvider === "google" && !user.password) {
+        throw new ApiError(400, "Google-authenticated accounts do not have a password to change")
+    }
     const isCurrentPasswordCorrect = await user.comparePassword(currentPassword)
     if (!isCurrentPasswordCorrect) {
-        throw new ApiError(401, "Current password is incorrect")
+        throw new ApiError(400, "Current password is Incorrect.")
     }
     user.password = newPassword;
     user.refreshToken = undefined; // this will log out user from all the existing sessions, so that user has to login again with new password
@@ -255,12 +416,60 @@ export const changeCurrentPassword = asyncHandler(async (req, res) => {
         validateBeforeSave: false
     })
 
+    const options = getCookieOptions()
+
     return res
     .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
     .json(
         new ApiResponse(200, {}, "Password changed successfully, please login again with new password")
     )
 
+});
+
+
+/**
+ * @name setGoogleAccountPassword
+ * @description Controller to set a password for a Google-authenticated account
+ * @route POST /api/v1/users/set-password
+ * @access Private
+ */
+export const setGoogleAccountPassword = asyncHandler(async (req, res) => {
+    if (!req.user?._id) {
+        throw new ApiError(401, "Unauthorized");
+    }
+
+    const { newPassword, confirmNewPassword } = req.body
+
+    if ([newPassword, confirmNewPassword].some((field) => field?.trim() === "") || !newPassword || !confirmNewPassword) {
+        throw new ApiError(400, "All fields are required")
+    }
+
+    if (newPassword !== confirmNewPassword) {
+        throw new ApiError(400, "New password and confirm new password do not match")
+    }
+
+    const passwordValidationError = validatePasswordStrength(newPassword)
+    if (passwordValidationError) {
+        throw new ApiError(400, passwordValidationError)
+    }
+
+    const user = await User.findById(req.user._id)
+    if (!user) {
+        throw new ApiError(404, "Please login again to set a password")
+    }
+
+    user.password = newPassword
+    await user.save({ validateBeforeSave: false })
+
+    const updatedUser = serializePublicUser(user)
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, { user: updatedUser }, "Password set successfully. You can now login locally with email and password")
+        )
 });
 
 
@@ -276,7 +485,7 @@ export const getCurrentUser = asyncHandler(async (req, res) => {
     }
     // get user details from req.user which is set in auth middleware after verifying access token
     // return user details in response
-    const user = await User.findById(req.user._id).select("-password -refreshToken")
+    const user = await User.findById(req.user._id)
     if (!user) {
         throw new ApiError(404, "User not found")
     }
@@ -284,7 +493,7 @@ export const getCurrentUser = asyncHandler(async (req, res) => {
     return res
     .status(200)
     .json(
-        new ApiResponse(200, user, "User details fetched successfully")
+        new ApiResponse(200, serializePublicUser(user), "User details fetched successfully")
     )
 });
 

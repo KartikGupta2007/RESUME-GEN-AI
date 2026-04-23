@@ -38,7 +38,7 @@ export const useInterview = () => {
             setReport(response.interviewReport)
             return response.interviewReport
         } catch (error) {
-            console.log(error)
+            // console.log(error)
             setReport(null)
         } finally {
             setLoading(false)
@@ -53,7 +53,7 @@ export const useInterview = () => {
             setReports(response.interviewReports)
             return response.interviewReports
         } catch (error) {
-            console.log(error)
+            // console.log(error)
         } finally {
             setLoading(false)
         }
@@ -73,7 +73,7 @@ export const useInterview = () => {
             window.URL.revokeObjectURL(url)
         }
         catch (error) {
-            console.log(error)
+            // console.log(error)
         } finally {
             setLoading(false)
         }

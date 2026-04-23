@@ -41,7 +41,10 @@ api.interceptors.response.use(
             if (
                 requestUrl.includes('/api/v1/users/refresh-token') ||
                 requestUrl.includes('/api/v1/users/login') ||
-                requestUrl.includes('/api/v1/users/register')
+                requestUrl.includes('/api/v1/users/register') ||
+                requestUrl.includes('/api/v1/users/google') ||
+                requestUrl.includes('/api/v1/users/change-password') ||
+                requestUrl.includes('/api/v1/users/set-password')
             ) {
                 return Promise.reject(error);
             }
@@ -83,7 +86,15 @@ export async function register({ userName, email, password, fullName }) {
         email, password, userName, fullName
     })
     hasNotifiedSessionExpired = false
-    console.log(response.data)
+    // console.log(response.data)
+    return response.data
+}
+
+export async function googleAuth({ credential }) {
+    const response = await api.post("/api/v1/users/google", {
+        credential,
+    })
+    hasNotifiedSessionExpired = false
     return response.data
 }
 
@@ -108,6 +119,14 @@ export async function getCurrentUser() {
 export async function changeCurrentPassword({ currentPassword, newPassword ,confirmNewPassword }) {
     const response = await api.post("/api/v1/users/change-password", {
         currentPassword, newPassword ,confirmNewPassword
+    })
+    return response.data
+}
+
+export async function setGoogleAccountPassword({ newPassword, confirmNewPassword }) {
+    const response = await api.post("/api/v1/users/set-password", {
+        newPassword,
+        confirmNewPassword,
     })
     return response.data
 }

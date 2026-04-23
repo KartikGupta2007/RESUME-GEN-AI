@@ -62,11 +62,11 @@ const Home = () => {
             if (data?._id) {
                 navigate(`/interview/${data._id}`)
             } else {
-                console.error("No valid data returned", data)
+                // console.error("No valid data returned", data)
                 alert("Failed to generate report. Please try again.")
             }
         } catch (error) {
-            console.error(error)
+            // console.error(error)
             alert(error?.message || "Unable to generate report right now.")
         }
     }

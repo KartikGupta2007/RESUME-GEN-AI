@@ -13,7 +13,7 @@ export const AuthProvider = ({ children }) => {
                 setUser(data?.data ?? null)
             } catch (err) {
                 if (err?.response?.status !== 401) {
-                    console.error(err)
+                    // console.error(err)
                 }
                 setUser(null)
             } finally {

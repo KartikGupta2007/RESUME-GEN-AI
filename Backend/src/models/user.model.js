@@ -21,13 +21,29 @@ const userSchema = new mongoose.Schema(
         },
         password:{
             type: String,
-            required: [true, "Password is required"],
+            required: function () {
+                return this.authProvider !== "google"
+            },
         },
         fullName:{
             type: String,
             required: true,
             trim: true,
             index:true,
+        },
+        authProvider: {
+            type: String,
+            enum: ["local", "google"],
+            default: "local",
+        },
+        googleId: {
+            type: String,
+            unique: true,
+            sparse: true,
+        },
+        avatarUrl: {
+            type: String,
+            trim: true,
         },
         refreshToken: {
             type: String
@@ -37,7 +53,7 @@ const userSchema = new mongoose.Schema(
 
 
 userSchema.pre("save", async function(){
-    if(!this.isModified("password")){
+    if(!this.password || !this.isModified("password")){
         return;
     }
     this.password = await bcrypt.hash(this.password, 10);
@@ -52,6 +68,9 @@ userSchema.pre("findOneAndUpdate", async function(){
 });
 
 userSchema.methods.comparePassword = async function(candidatePassword){
+    if (!this.password) {
+        return false;
+    }
     return await bcrypt.compare(candidatePassword, this.password);
 }
 

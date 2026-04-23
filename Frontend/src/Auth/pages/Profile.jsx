@@ -3,14 +3,160 @@ import { useAuth } from '../context/useAuth.js'
 import { useNavigate } from 'react-router'
 import '../styles/auth.style.scss'
 
+const PASSWORD_RULES = [
+    {
+        id: "length",
+        label: "At least 8 characters",
+        isValid: (value) => value.length >= 8,
+    },
+    {
+        id: "uppercase",
+        label: "At least one uppercase letter",
+        isValid: (value) => /[A-Z]/.test(value),
+    },
+    {
+        id: "lowercase",
+        label: "At least one lowercase letter",
+        isValid: (value) => /[a-z]/.test(value),
+    },
+    {
+        id: "number",
+        label: "At least one number",
+        isValid: (value) => /[0-9]/.test(value),
+    },
+    {
+        id: "special",
+        label: "At least one special character",
+        isValid: (value) => /[^A-Za-z0-9]/.test(value),
+    },
+]
+
+const PasswordRules = ({ value, shouldShow, additionalRules = [] }) => {
+    if (!shouldShow) {
+        return null
+    }
+
+    const combinedRules = [...PASSWORD_RULES, ...additionalRules]
+
+    return (
+        <ul style={{
+            margin: '0.25rem 0 0',
+            paddingLeft: '1rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.25rem',
+            fontSize: '0.85rem',
+            listStyleType: 'none',
+        }}>
+            {combinedRules.map((rule) => {
+                const valid = rule.isValid(value)
+                return (
+                    <li key={rule.id} style={{ color: valid ? '#059669' : '#d97706' }}>
+                        {valid ? '[OK]' : '[X]'} {rule.label}
+                    </li>
+                )
+            })}
+        </ul>
+    )
+}
+
+const PasswordField = ({ label, value, onChange, show, onToggle, placeholder }) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <label style={{ color: '#aaa', fontSize: '0.95rem' }}>{label}</label>
+        <div style={{ position: 'relative' }}>
+            <input
+                type={show ? 'text' : 'password'}
+                value={value}
+                onChange={onChange}
+                placeholder={placeholder}
+                required
+                style={{
+                    padding: '1rem',
+                    paddingRight: '5rem',
+                    borderRadius: '0.5rem',
+                    border: '1px solid #333',
+                    backgroundColor: '#2a2a2a',
+                    color: '#fff',
+                    outline: 'none',
+                    fontSize: '1rem',
+                    width: '100%',
+                    boxSizing: 'border-box',
+                }}
+            />
+            <button
+                type="button"
+                onClick={onToggle}
+                style={{
+                    position: 'absolute',
+                    right: '0.75rem',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    border: 'none',
+                    background: 'transparent',
+                    color: '#ff2d78',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                }}
+            >
+                {show ? 'Hide' : 'Show'}
+            </button>
+        </div>
+    </div>
+)
+
 const Profile = () => {
-    const { user, handleLogout, handleChangePassword } = useAuth()
+    const { user, handleLogout, handleChangePassword, handleSetGooglePassword } = useAuth()
     const navigate = useNavigate()
-    
+
     const [currentPassword, setCurrentPassword] = useState('')
     const [newPassword, setNewPassword] = useState('')
     const [confirmNewPassword, setConfirmNewPassword] = useState('')
     const [message, setMessage] = useState('')
+    const [passwordSetupMessage, setPasswordSetupMessage] = useState('')
+    const [googleNewPassword, setGoogleNewPassword] = useState('')
+    const [googleConfirmNewPassword, setGoogleConfirmNewPassword] = useState('')
+    const [showCurrentPassword, setShowCurrentPassword] = useState(false)
+    const [showNewPassword, setShowNewPassword] = useState(false)
+    const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false)
+    const [showGoogleNewPassword, setShowGoogleNewPassword] = useState(false)
+    const [showGoogleConfirmNewPassword, setShowGoogleConfirmNewPassword] = useState(false)
+    const [newPasswordTouched, setNewPasswordTouched] = useState(false)
+    const [googleNewPasswordTouched, setGoogleNewPasswordTouched] = useState(false)
+
+    const isGoogleOnlyAccount = user?.authProvider === 'google' && !user?.hasPassword
+    const accountTypeLabel = user?.authProvider === 'google' && user?.hasPassword ? 'Local' : (user?.authProvider === 'google' ? 'Google' : 'Local')
+    const localFailedPasswordRules = PASSWORD_RULES.filter((rule) => !rule.isValid(newPassword))
+    const googleFailedPasswordRules = PASSWORD_RULES.filter((rule) => !rule.isValid(googleNewPassword))
+    const shouldShowLocalPasswordRules = newPasswordTouched || newPassword.length > 0
+    const shouldShowGooglePasswordRules = googleNewPasswordTouched || googleNewPassword.length > 0
+    const localAdditionalRules = [
+        {
+            id: 'different-from-confirm',
+            label: 'Confirm Password should be same as New Password',
+            isValid: () => confirmNewPassword.trim() && newPassword.trim() && newPassword === confirmNewPassword,
+        },
+    ]
+    const googleAdditionalRules = [
+        {
+            id: 'different-from-confirm',
+            label: 'Confirm Password should be same as New Password',
+            isValid: () => googleConfirmNewPassword.trim() && googleNewPassword.trim() && googleNewPassword === googleConfirmNewPassword,
+        },
+    ]
+
+    const isLocalSubmitDisabled =
+        !currentPassword.trim() ||
+        !newPassword.trim() ||
+        !confirmNewPassword.trim() ||
+        localFailedPasswordRules.length > 0 ||
+        newPassword !== confirmNewPassword ||
+        currentPassword === newPassword
+
+    const isGoogleSubmitDisabled =
+        !googleNewPassword.trim() ||
+        !googleConfirmNewPassword.trim() ||
+        googleFailedPasswordRules.length > 0 ||
+        googleNewPassword !== googleConfirmNewPassword
 
     const onLogout = async () => {
         await handleLogout()
@@ -19,15 +165,51 @@ const Profile = () => {
 
     const onChangePassword = async (e) => {
         e.preventDefault()
+        setMessage('')
+        setNewPasswordTouched(true)
         if(newPassword !== confirmNewPassword) {
-            setMessage("Passwords do not match")
+            setMessage("Confirm password must match the new password.")
             return
         }
-        const success = await handleChangePassword({ currentPassword, newPassword, confirmNewPassword })
-        if(success) {
+        if(currentPassword === newPassword) {
+            setMessage("New password must be different from current password.")
+            return
+        }
+        // check weather the current current password is correct and then change to new password, if successful log the user out so that they can login again with new password, if failed show error message
+        
+        const result = await handleChangePassword({ currentPassword, newPassword, confirmNewPassword })
+        // console.log(result)
+        if(result?.success) {
+            setCurrentPassword('')
+            setNewPassword('')
+            setConfirmNewPassword('')
             navigate('/login')
         } else {
-            setMessage("Failed to change password")
+            setMessage(result?.message || "Failed to change password")
+        }
+    }
+
+    const onSetGooglePassword = async (e) => {
+        e.preventDefault()
+        setPasswordSetupMessage('')
+        setGoogleNewPasswordTouched(true)
+
+        if (googleNewPassword !== googleConfirmNewPassword) {
+            setPasswordSetupMessage("Confirm password must match the new password.")
+            return
+        }
+
+        const result = await handleSetGooglePassword({
+            newPassword: googleNewPassword,
+            confirmNewPassword: googleConfirmNewPassword,
+        })
+
+        if (result?.success) {
+            setPasswordSetupMessage(result.message || 'Password set successfully')
+            setGoogleNewPassword('')
+            setGoogleConfirmNewPassword('')
+        } else {
+            setPasswordSetupMessage(result?.message || 'Failed to set password')
         }
     }
 
@@ -67,6 +249,10 @@ const Profile = () => {
                             <label style={{ color: '#aaa', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Email Address</label>
                             <p style={{ margin: '0.3rem 0', fontSize: '1.1rem' }}>{user?.email}</p>
                         </div>
+                        <div>
+                            <label style={{ color: '#aaa', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Account Type</label>
+                            <p style={{ margin: '0.3rem 0', fontSize: '1.1rem' }}>{accountTypeLabel}</p>
+                        </div>
                     </div>
 
                     <div style={{ flexGrow: 1 }}></div>
@@ -81,29 +267,102 @@ const Profile = () => {
                 {/* Right Column: Security */}
                 <div style={{ flex: 1.5, backgroundColor: '#1E1E1E', padding: '2.5rem', borderRadius: '1rem', boxShadow: '0 8px 32px rgba(0,0,0,0.3)', maxHeight: '100%' }}>
                     <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid #333' }}>Security Settings</h3>
-                    
-                    <h4 style={{ margin: '0 0 1rem 0', color: '#ccc', fontSize: '1.1rem' }}>Change Password</h4>
-                    {message && <p style={{ color: '#ff2d78', fontSize: '1rem', marginBottom: '1.5rem', padding: '1rem', backgroundColor: 'rgba(255, 45, 120, 0.1)', borderRadius: '0.5rem' }}>{message}</p>}
-                    
-                    <form onSubmit={onChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            <label style={{ color: '#aaa', fontSize: '0.95rem' }}>Current Password</label>
-                            <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required style={{ padding: '1rem', borderRadius: '0.5rem', border: '1px solid #333', backgroundColor: '#2a2a2a', color: '#fff', outline: 'none', fontSize: '1rem' }} />
-                        </div>
-                        <div style={{ display: 'flex', gap: '1.5rem' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
-                                <label style={{ color: '#aaa', fontSize: '0.95rem' }}>New Password</label>
-                                <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required style={{ padding: '1rem', borderRadius: '0.5rem', border: '1px solid #333', backgroundColor: '#2a2a2a', color: '#fff', outline: 'none', fontSize: '1rem' }} />
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
-                                <label style={{ color: '#aaa', fontSize: '0.95rem' }}>Confirm Password</label>
-                                <input type="password" value={confirmNewPassword} onChange={e => setConfirmNewPassword(e.target.value)} required style={{ padding: '1rem', borderRadius: '0.5rem', border: '1px solid #333', backgroundColor: '#2a2a2a', color: '#fff', outline: 'none', fontSize: '1rem' }} />
-                            </div>
-                        </div>
-                        <button type="submit" style={{ marginTop: '1rem', alignSelf: 'flex-start', padding: '1rem 2rem', backgroundColor: '#ff2d78', color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem', transition: 'opacity 0.2s' }}>
-                            Update Password
-                        </button>
-                    </form>
+
+                    {isGoogleOnlyAccount ? (
+                        <>
+                            <p style={{ color: '#aaa', fontSize: '1rem', marginTop: '1rem' }}>
+                                Set a password here, and then you can log in locally with email and password.
+                            </p>
+                            {passwordSetupMessage && (
+                                <p style={{ color: '#ff2d78', fontSize: '1rem', marginBottom: '1.5rem', padding: '1rem', backgroundColor: 'rgba(255, 45, 120, 0.1)', borderRadius: '0.5rem' }}>
+                                    {passwordSetupMessage}
+                                </p>
+                            )}
+
+                            <form onSubmit={onSetGooglePassword} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1rem' }}>
+                                <PasswordField
+                                    label="New Password"
+                                    value={googleNewPassword}
+                                    onChange={(e) => {
+                                        setGoogleNewPassword(e.target.value)
+                                        setGoogleNewPasswordTouched(true)
+                                        if (passwordSetupMessage) setPasswordSetupMessage('')
+                                    }}
+                                    show={showGoogleNewPassword}
+                                    onToggle={() => setShowGoogleNewPassword((prev) => !prev)}
+                                />
+
+                                <PasswordRules value={googleNewPassword} shouldShow={shouldShowGooglePasswordRules} additionalRules={googleAdditionalRules} />
+
+                                <PasswordField
+                                    label="Confirm Password"
+                                    value={googleConfirmNewPassword}
+                                    onChange={(e) => {
+                                        setGoogleConfirmNewPassword(e.target.value)
+                                        if (passwordSetupMessage) setPasswordSetupMessage('')
+                                    }}
+                                    show={showGoogleConfirmNewPassword}
+                                    onToggle={() => setShowGoogleConfirmNewPassword((prev) => !prev)}
+                                />
+                                <button type="submit" disabled={isGoogleSubmitDisabled} style={{ marginTop: '1rem', alignSelf: 'flex-start', padding: '1rem 2rem', backgroundColor: '#ff2d78', color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: isGoogleSubmitDisabled ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '1rem', transition: 'opacity 0.2s', opacity: isGoogleSubmitDisabled ? 0.55 : 1 }}>
+                                    Set Password
+                                </button>
+                            </form>
+                        </>
+                    ) : (
+                        <>
+                            <h4 style={{ margin: '0 0 1rem 0', color: '#ccc', fontSize: '1.1rem' }}>Change Password</h4>
+                            {message && (
+                                <p style={{ color: '#ff2d78', fontSize: '1rem', marginBottom: '1.5rem', padding: '1rem', backgroundColor: 'rgba(255, 45, 120, 0.1)', borderRadius: '0.5rem' }}>
+                                    {message}
+                                </p>
+                            )}
+
+                            <form onSubmit={onChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                <PasswordField
+                                    label="Current Password"
+                                    value={currentPassword}
+                                    onChange={(e) => {
+                                        setCurrentPassword(e.target.value)
+                                        if (message) setMessage('')
+                                    }}
+                                    show={showCurrentPassword}
+                                    onToggle={() => setShowCurrentPassword((prev) => !prev)}
+                                />
+                                <div style={{ display: 'flex', gap: '1.5rem' }}>
+                                    <div style={{ flex: 1 }}>
+                                        <PasswordField
+                                            label="New Password"
+                                            value={newPassword}
+                                            onChange={(e) => {
+                                                setNewPassword(e.target.value)
+                                                setNewPasswordTouched(true)
+                                                if (message) setMessage('')
+                                            }}
+                                            show={showNewPassword}
+                                            onToggle={() => setShowNewPassword((prev) => !prev)}
+                                        />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <PasswordField
+                                            label="Confirm Password"
+                                            value={confirmNewPassword}
+                                            onChange={(e) => {
+                                                setConfirmNewPassword(e.target.value)
+                                                if (message) setMessage('')
+                                            }}
+                                            show={showConfirmNewPassword}
+                                            onToggle={() => setShowConfirmNewPassword((prev) => !prev)}
+                                        />
+                                    </div>
+                                </div>
+                                <PasswordRules value={newPassword} shouldShow={shouldShowLocalPasswordRules} additionalRules={localAdditionalRules} />
+                                <button type="submit" disabled={isLocalSubmitDisabled} style={{ marginTop: '1rem', alignSelf: 'flex-start', padding: '1rem 2rem', backgroundColor: '#ff2d78', color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: isLocalSubmitDisabled ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '1rem', transition: 'opacity 0.2s', opacity: isLocalSubmitDisabled ? 0.55 : 1 }}>
+                                    Update Password
+                                </button>
+                            </form>
+                        </>
+                    )}
                 </div>
 
             </div>
