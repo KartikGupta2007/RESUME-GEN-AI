@@ -11,6 +11,21 @@ import { InterviewProvider } from './Interview/context/interview.context.jsx'
 import './style.scss'
 import Home from './Interview/pages/Home.jsx'
 import Interview from './Interview/pages/Interview.jsx' 
+import { useNavigate } from 'react-router';
+
+
+function PageNotFound() {
+  const navigate = useNavigate();
+  return (
+    <main className='loading-screen'>
+        <h1 >404 Page Not found </h1>
+        <br />
+        <button onClick={() => navigate('/')} className="button primary-button" style={{marginTop: '1rem'}}>
+            Back Home
+        </button>
+    </main>
+  )
+}
 
 const router = createBrowserRouter([
     {
@@ -33,6 +48,10 @@ const router = createBrowserRouter([
         path:"/interview/:interviewId",
         element: <Protected><Interview /></Protected>
     },
+    {
+        path: "*",
+        element: <PageNotFound />
+    }
 ])
 
 createRoot(document.getElementById('root')).render(

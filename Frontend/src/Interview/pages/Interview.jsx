@@ -27,10 +27,20 @@ const Interview = () => {
 
 
 
-    if (loading || !report) {
+    if (loading) {
         return (
             <main className='loading-screen'>
                 <h1>Loading your interview plan...</h1>
+            </main>
+        )
+    }
+    if(!report){
+        return (
+            <main className='loading-screen'>
+                <h1 >Interview report not found associated with the provided Account</h1>
+                <button onClick={() => navigate('/')} className="button primary-button" style={{marginTop: '1rem'}}>
+                    Back Home
+                </button>
             </main>
         )
     }

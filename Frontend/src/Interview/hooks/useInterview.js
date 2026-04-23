@@ -39,6 +39,7 @@ export const useInterview = () => {
             return response.interviewReport
         } catch (error) {
             console.log(error)
+            setReport(null)
         } finally {
             setLoading(false)
         }
