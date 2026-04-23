@@ -239,6 +239,7 @@ export const registerUser = asyncHandler(async(req, res) => {
  * @access Public
  */
 export const googleAuth = asyncHandler(async (req, res) => {
+    googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
     const { credential } = req.body;
 
     if (!credential) {
