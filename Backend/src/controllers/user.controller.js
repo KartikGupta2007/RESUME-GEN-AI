@@ -239,9 +239,9 @@ export const registerUser = asyncHandler(async(req, res) => {
  * @access Public
  */
 export const googleAuth = asyncHandler(async (req, res) => {
-    googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+    // googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
     const { credential } = req.body;
-    console.log("Received Google credential:", !!credential) // Log whether credential is received
+    console.log("Received Google credential:", credential) // Log whether credential is received
     if (!credential) {
         throw new ApiError(400, "Google credential is required");
     }
