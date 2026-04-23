@@ -241,7 +241,7 @@ export const registerUser = asyncHandler(async(req, res) => {
 export const googleAuth = asyncHandler(async (req, res) => {
     googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
     const { credential } = req.body;
-
+    console.log("Received Google credential:", !!credential) // Log whether credential is received
     if (!credential) {
         throw new ApiError(400, "Google credential is required");
     }
@@ -254,9 +254,9 @@ export const googleAuth = asyncHandler(async (req, res) => {
         idToken: credential,
         audience: process.env.GOOGLE_CLIENT_ID,
     });
-
+    console.log("Google ID token verified successfully") // Log successful verification
     const payload = ticket.getPayload();
-
+    console.log("Google token payload:", payload) // Log the payload received from Google
     if (!payload?.email || !payload?.sub) {
         throw new ApiError(401, "Unable to verify Google account");
     }
