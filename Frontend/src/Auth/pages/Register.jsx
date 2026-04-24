@@ -3,34 +3,7 @@ import { useNavigate, Link } from 'react-router'
 import { useAuth } from '../context/useAuth.js'
 import "../styles/auth.style.scss"
 import GoogleAuthButton from '../components/GoogleAuthButton.jsx'
-
-const PASSWORD_RULES = [
-    {
-        id: "length",
-        label: "At least 8 characters",
-        isValid: (value) => value.length >= 8,
-    },
-    {
-        id: "uppercase",
-        label: "At least one uppercase letter",
-        isValid: (value) => /[A-Z]/.test(value),
-    },
-    {
-        id: "lowercase",
-        label: "At least one lowercase letter",
-        isValid: (value) => /[a-z]/.test(value),
-    },
-    {
-        id: "number",
-        label: "At least one number",
-        isValid: (value) => /[0-9]/.test(value),
-    },
-    {
-        id: "special",
-        label: "At least one special character",
-        isValid: (value) => /[^A-Za-z0-9]/.test(value),
-    },
-]
+import { PASSWORD_RULES } from '../components/PasswordRules.jsx'
 
 const Register = () => {
 

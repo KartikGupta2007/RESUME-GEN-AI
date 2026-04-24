@@ -2,107 +2,11 @@ import { useState } from 'react'
 import { useAuth } from '../context/useAuth.js'
 import { useNavigate } from 'react-router'
 import '../styles/auth.style.scss'
+import PasswordField from '../components/PasswordField.jsx'
+import PasswordRules from '../components/PasswordRules.jsx'
+import { PASSWORD_RULES } from '../components/PasswordRules.jsx'
 
-const PASSWORD_RULES = [
-    {
-        id: "length",
-        label: "At least 8 characters",
-        isValid: (value) => value.length >= 8,
-    },
-    {
-        id: "uppercase",
-        label: "At least one uppercase letter",
-        isValid: (value) => /[A-Z]/.test(value),
-    },
-    {
-        id: "lowercase",
-        label: "At least one lowercase letter",
-        isValid: (value) => /[a-z]/.test(value),
-    },
-    {
-        id: "number",
-        label: "At least one number",
-        isValid: (value) => /[0-9]/.test(value),
-    },
-    {
-        id: "special",
-        label: "At least one special character",
-        isValid: (value) => /[^A-Za-z0-9]/.test(value),
-    },
-]
 
-const PasswordRules = ({ value, shouldShow, additionalRules = [] }) => {
-    if (!shouldShow) {
-        return null
-    }
-
-    const combinedRules = [...PASSWORD_RULES, ...additionalRules]
-
-    return (
-        <ul style={{
-            margin: '0.25rem 0 0',
-            paddingLeft: '1rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.25rem',
-            fontSize: '0.85rem',
-            listStyleType: 'none',
-        }}>
-            {combinedRules.map((rule) => {
-                const valid = rule.isValid(value)
-                return (
-                    <li key={rule.id} style={{ color: valid ? '#059669' : '#d97706' }}>
-                        {valid ? '[OK]' : '[X]'} {rule.label}
-                    </li>
-                )
-            })}
-        </ul>
-    )
-}
-
-const PasswordField = ({ label, value, onChange, show, onToggle, placeholder }) => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        <label style={{ color: '#aaa', fontSize: '0.95rem' }}>{label}</label>
-        <div style={{ position: 'relative' }}>
-            <input
-                type={show ? 'text' : 'password'}
-                value={value}
-                onChange={onChange}
-                placeholder={placeholder}
-                required
-                style={{
-                    padding: '1rem',
-                    paddingRight: '5rem',
-                    borderRadius: '0.5rem',
-                    border: '1px solid #333',
-                    backgroundColor: '#2a2a2a',
-                    color: '#fff',
-                    outline: 'none',
-                    fontSize: '1rem',
-                    width: '100%',
-                    boxSizing: 'border-box',
-                }}
-            />
-            <button
-                type="button"
-                onClick={onToggle}
-                style={{
-                    position: 'absolute',
-                    right: '0.75rem',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    border: 'none',
-                    background: 'transparent',
-                    color: '#ff2d78',
-                    cursor: 'pointer',
-                    fontWeight: 'bold',
-                }}
-            >
-                {show ? 'Hide' : 'Show'}
-            </button>
-        </div>
-    </div>
-)
 
 const Profile = () => {
     const { user, handleLogout, handleChangePassword, handleSetGooglePassword } = useAuth()
