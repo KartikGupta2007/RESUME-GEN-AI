@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useAuth } from '../context/useAuth.js'
 import { useNavigate } from 'react-router'
 import '../styles/auth.style.scss'
-import PasswordField from '../components/PasswordField.jsx'
 import PasswordRules from '../components/PasswordRules.jsx'
+import PasswordField from '../components/PasswordField.jsx'
 import { PASSWORD_RULES } from '../components/PasswordRules.jsx'
 
 
